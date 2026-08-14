@@ -1,0 +1,20 @@
+.asset-form .ant-picker,
+.asset-form .ant-select {
+  width: 100%;
+}
+
+.asset-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--app-space-sm);
+  border-top: 1px solid #f0f0f0;
+}
+
+@media (max-width: 576px) {
+  .asset-form-actions,
+  .asset-form-actions .ant-space,
+  .asset-form-actions .ant-space-item,
+  .asset-form-actions .ant-btn {
+    width: 100%;
+  }
+}

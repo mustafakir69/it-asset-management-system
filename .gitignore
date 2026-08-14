@@ -1,0 +1,45 @@
+# AI / Codex çalışma dosyaları
+AGENTS.md
+TASKS.md
+PROGRESS.md
+SCREEN_PLAN.md
+
+# Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sw?
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# .NET / Visual Studio
+.vs/
+bin/
+obj/
+
+# Local DB / temporary
+*.db
+*.db-shm
+*.db-wal

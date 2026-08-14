@@ -1,0 +1,18 @@
+.assignments-content {
+  width: 100%;
+}
+
+.assignments-page .ant-select,
+.assignments-page .ant-table-wrapper {
+  width: 100%;
+}
+
+.assignments-page .ant-table-cell {
+  vertical-align: middle;
+}
+
+@media (max-width: 576px) {
+  .assignments-page .ant-pagination {
+    justify-content: flex-start;
+  }
+}

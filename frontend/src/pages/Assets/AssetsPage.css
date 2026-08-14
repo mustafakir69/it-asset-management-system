@@ -1,0 +1,42 @@
+.assets-content {
+  width: 100%;
+}
+
+.assets-page .ant-select {
+  width: 100%;
+}
+
+.assets-page .ant-table-wrapper {
+  width: 100%;
+}
+
+.assets-page .ant-table-cell {
+  vertical-align: middle;
+}
+
+.assets-page .ant-table-cell-fix-right {
+  box-shadow: -6px 0 12px rgb(0 0 0 / 4%);
+}
+
+.assets-page .asset-actions-button {
+  width: 32px;
+  padding-inline: 0;
+}
+
+.assets-page .asset-date-column {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.assets-page .asset-date-heading {
+  display: inline-block;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+}
+
+@media (max-width: 576px) {
+  .assets-page .ant-pagination {
+    justify-content: flex-start;
+  }
+}

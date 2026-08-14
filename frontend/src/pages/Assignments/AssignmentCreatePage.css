@@ -1,0 +1,15 @@
+.assignment-create-page .ant-picker {
+  width: 100%;
+}
+
+.assignment-create-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--app-space-xs);
+}
+
+@media (max-width: 576px) {
+  .assignment-create-actions {
+    justify-content: flex-start;
+  }
+}

@@ -1,0 +1,15 @@
+.assignment-history-content,
+.assignment-history-page .ant-select,
+.assignment-history-page .ant-table-wrapper {
+  width: 100%;
+}
+
+.assignment-history-page .ant-table-cell {
+  vertical-align: middle;
+}
+
+@media (max-width: 576px) {
+  .assignment-history-page .ant-pagination {
+    justify-content: flex-start;
+  }
+}

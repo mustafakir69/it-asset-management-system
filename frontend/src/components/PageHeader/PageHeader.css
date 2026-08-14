@@ -1,0 +1,27 @@
+.page-header {
+  margin-bottom: var(--app-space-md);
+}
+
+.page-header-text {
+  min-width: 0;
+}
+
+.page-header .ant-typography {
+  margin-bottom: 0;
+}
+
+.page-header .ant-typography + .ant-typography {
+  display: block;
+  margin-top: var(--app-space-xs);
+}
+
+.page-header-actions {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 576px) {
+  .page-header-actions,
+  .page-header-actions .ant-btn {
+    width: 100%;
+  }
+}
