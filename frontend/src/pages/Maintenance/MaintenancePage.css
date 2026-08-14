@@ -1,0 +1,12 @@
+.maintenance-content,
+.maintenance-table-content {
+  width: 100%;
+}
+
+.maintenance-page .ant-select {
+  width: 100%;
+}
+
+.maintenance-page .ant-statistic-title {
+  min-height: 44px;
+}

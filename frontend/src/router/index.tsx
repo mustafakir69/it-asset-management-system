@@ -16,6 +16,19 @@ import LicenseDetailPage from '../pages/Licenses/LicenseDetailPage'
 import LicenseEditPage from '../pages/Licenses/LicenseEditPage'
 import ExpiringLicensesPage from '../pages/Licenses/ExpiringLicensesPage'
 import LicensesPage from '../pages/Licenses/LicensesPage'
+import MaintenancePage from '../pages/Maintenance/MaintenancePage'
+import MaintenanceHistoryPage from '../pages/Maintenance/MaintenanceHistoryPage'
+import MaintenancePlanCreatePage from '../pages/Maintenance/MaintenancePlanCreatePage'
+import MaintenancePlanDetailPage from '../pages/Maintenance/MaintenancePlanDetailPage'
+import MaintenancePlanEditPage from '../pages/Maintenance/MaintenancePlanEditPage'
+import MaintenancePlansPage from '../pages/Maintenance/MaintenancePlansPage'
+import MaintenanceRequestCreatePage from '../pages/Maintenance/MaintenanceRequestCreatePage'
+import MaintenanceRequestDetailPage from '../pages/Maintenance/MaintenanceRequestDetailPage'
+import MaintenanceRequestEditPage from '../pages/Maintenance/MaintenanceRequestEditPage'
+import MaintenanceRequestsPage from '../pages/Maintenance/MaintenanceRequestsPage'
+import MaintenanceTaskDetailPage from '../pages/Maintenance/MaintenanceTaskDetailPage'
+import MaintenanceTasksPage from '../pages/Maintenance/MaintenanceTasksPage'
+import MyMaintenanceRequestsPage from '../pages/Maintenance/MyMaintenanceRequestsPage'
 import NotFoundPage from '../pages/NotFoundPage'
 import PlaceholderPage from '../pages/PlaceholderPage'
 import StockItemCreatePage from '../pages/Stock/StockItemCreatePage'
@@ -69,11 +82,19 @@ export const router = createBrowserRouter([
       { path: 'licenses/:id/edit', element: <LicenseEditPage /> },
       { path: 'licenses/:id', element: <LicenseDetailPage /> },
       { path: 'my-licenses', element: <PlaceholderPage title="Lisanslarım" /> },
-      { path: 'maintenance/plans', element: <PlaceholderPage title="Bakım Planları" /> },
-      { path: 'maintenance/tasks', element: <PlaceholderPage title="Bakım Görevleri" /> },
-      { path: 'maintenance/history', element: <PlaceholderPage title="Bakım Geçmişi" /> },
-      { path: 'maintenance/tasks/:taskId', element: <PlaceholderPage title="Bakım Görevi Detayı" /> },
-      { path: 'my-maintenance-requests', element: <PlaceholderPage title="Bakım Taleplerim" /> },
+      { path: 'maintenance', element: <MaintenancePage /> },
+      { path: 'maintenance/plans', element: <MaintenancePlansPage /> },
+      { path: 'maintenance/plans/new', element: <MaintenancePlanCreatePage /> },
+      { path: 'maintenance/plans/:id/edit', element: <MaintenancePlanEditPage /> },
+      { path: 'maintenance/plans/:id', element: <MaintenancePlanDetailPage /> },
+      { path: 'maintenance/tasks', element: <MaintenanceTasksPage /> },
+      { path: 'maintenance/requests', element: <MaintenanceRequestsPage /> },
+      { path: 'maintenance/requests/new', element: <MaintenanceRequestCreatePage /> },
+      { path: 'maintenance/requests/:id/edit', element: <MaintenanceRequestEditPage /> },
+      { path: 'maintenance/requests/:id', element: <MaintenanceRequestDetailPage /> },
+      { path: 'maintenance/history', element: <MaintenanceHistoryPage /> },
+      { path: 'maintenance/tasks/:taskId', element: <MaintenanceTaskDetailPage /> },
+      { path: 'maintenance/my-requests', element: <MyMaintenanceRequestsPage /> },
       { path: 'reports', element: <PlaceholderPage title="Raporlar" /> },
       { path: 'admin/users', element: <PlaceholderPage title="Kullanıcılar" /> },
       { path: 'admin/categories', element: <PlaceholderPage title="Kategoriler" /> },

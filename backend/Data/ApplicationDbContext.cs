@@ -10,6 +10,9 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<StockItem> StockItems => Set<StockItem>();
     public DbSet<StockTransaction> StockTransactions => Set<StockTransaction>();
     public DbSet<License> Licenses => Set<License>();
+    public DbSet<MaintenancePlan> MaintenancePlans => Set<MaintenancePlan>();
+    public DbSet<MaintenanceTask> MaintenanceTasks => Set<MaintenanceTask>();
+    public DbSet<MaintenanceRequest> MaintenanceRequests => Set<MaintenanceRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -174,6 +177,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
         ConfigureStockItems(modelBuilder);
         ConfigureStockTransactions(modelBuilder);
         ConfigureLicenses(modelBuilder);
+        ConfigureMaintenance(modelBuilder);
     }
 
     private static void ConfigureStockItems(ModelBuilder modelBuilder)
@@ -651,5 +655,130 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
                 IsActive = false,
                 Notes = "Geçici olarak pasife alınmış paket"
             });
+    }
+
+    private static void ConfigureMaintenance(ModelBuilder modelBuilder)
+    {
+        var maintenancePlan = modelBuilder.Entity<MaintenancePlan>();
+
+        maintenancePlan.ToTable("MaintenancePlans", table =>
+            table.HasCheckConstraint(
+                "CK_MaintenancePlans_FrequencyDays_Positive",
+                "[FrequencyDays] > 0"));
+        maintenancePlan.HasKey(plan => plan.Id);
+        maintenancePlan.Property(plan => plan.Id).HasMaxLength(64);
+        maintenancePlan.Property(plan => plan.AssetId).HasMaxLength(64).IsRequired();
+        maintenancePlan.Property(plan => plan.Name).HasMaxLength(150).IsRequired();
+        maintenancePlan.Property(plan => plan.Description).HasMaxLength(1000);
+        maintenancePlan.Property(plan => plan.StartDate).HasColumnType("date");
+        maintenancePlan.Property(plan => plan.ResponsibleTechnician)
+            .HasMaxLength(150)
+            .HasDefaultValue("Atanmamış")
+            .IsRequired();
+        maintenancePlan.Property(plan => plan.CreatedAt).HasColumnType("datetimeoffset");
+        maintenancePlan.HasIndex(plan => plan.AssetId)
+            .HasDatabaseName("IX_MaintenancePlans_AssetId");
+        maintenancePlan.HasOne(plan => plan.Asset)
+            .WithMany(asset => asset.MaintenancePlans)
+            .HasForeignKey(plan => plan.AssetId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        var maintenanceTask = modelBuilder.Entity<MaintenanceTask>();
+
+        maintenanceTask.ToTable("MaintenanceTasks");
+        maintenanceTask.HasKey(task => task.Id);
+        maintenanceTask.Property(task => task.Id).HasMaxLength(64);
+        maintenanceTask.Property(task => task.MaintenancePlanId).HasMaxLength(64).IsRequired();
+        maintenanceTask.Property(task => task.AssetId).HasMaxLength(64).IsRequired();
+        maintenanceTask.Property(task => task.Title).HasMaxLength(150).IsRequired();
+        maintenanceTask.Property(task => task.Description).HasMaxLength(1000);
+        maintenanceTask.Property(task => task.PlannedDate).HasColumnType("date");
+        maintenanceTask.Property(task => task.CompletedDate).HasColumnType("date");
+        maintenanceTask.Property(task => task.Status)
+            .HasConversion<string>()
+            .HasMaxLength(30)
+            .IsRequired();
+        maintenanceTask.Property(task => task.TechnicianName).HasMaxLength(150);
+        maintenanceTask.Property(task => task.Notes).HasMaxLength(1000);
+        maintenanceTask.Property(task => task.CompletedBy).HasMaxLength(150);
+        maintenanceTask.Property(task => task.Result).HasMaxLength(1000);
+        maintenanceTask.Property(task => task.WorkNotes).HasMaxLength(1000);
+        maintenanceTask.Property(task => task.CancellationReason).HasMaxLength(1000);
+        maintenanceTask.Property(task => task.CreatedAt).HasColumnType("datetimeoffset");
+        maintenanceTask.HasIndex(task => new { task.MaintenancePlanId, task.PlannedDate })
+            .IsUnique()
+            .HasDatabaseName("IX_MaintenanceTasks_PlanId_PlannedDate");
+        maintenanceTask.HasOne(task => task.MaintenancePlan)
+            .WithMany(plan => plan.Tasks)
+            .HasForeignKey(task => task.MaintenancePlanId)
+            .OnDelete(DeleteBehavior.Restrict);
+        maintenanceTask.HasOne(task => task.Asset)
+            .WithMany(asset => asset.MaintenanceTasks)
+            .HasForeignKey(task => task.AssetId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        var createdAt = new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero);
+
+        maintenancePlan.HasData(
+            new MaintenancePlan { Id = "maintenance-plan-001", AssetId = "asset-db-001", Name = "Periyodik Donanım Kontrolü", Description = "Genel donanım ve bağlantı kontrolleri.", FrequencyDays = 90, StartDate = new DateOnly(2026, 8, 18), ResponsibleTechnician = "Teknik Ekip A", IsActive = true, CreatedAt = createdAt },
+            new MaintenancePlan { Id = "maintenance-plan-002", AssetId = "asset-db-002", Name = "Fan ve Soğutma Bakımı", Description = "Fan temizliği ve sıcaklık kontrolü.", FrequencyDays = 120, StartDate = new DateOnly(2026, 9, 15), ResponsibleTechnician = "Teknik Ekip B", IsActive = true, CreatedAt = createdAt },
+            new MaintenancePlan { Id = "maintenance-plan-003", AssetId = "asset-db-003", Name = "Disk Sağlık Kontrolü", Description = "Disk sağlığı ve performans kontrolü.", FrequencyDays = 60, StartDate = new DateOnly(2026, 8, 1), ResponsibleTechnician = "Teknik Ekip A", IsActive = true, CreatedAt = createdAt },
+            new MaintenancePlan { Id = "maintenance-plan-004", AssetId = "asset-db-006", Name = "Ekran ve Bağlantı Kontrolü", Description = "Panel, kablo ve girişlerin kontrolü.", FrequencyDays = 180, StartDate = new DateOnly(2026, 10, 10), ResponsibleTechnician = "Teknik Ekip B", IsActive = true, CreatedAt = createdAt },
+            new MaintenancePlan { Id = "maintenance-plan-005", AssetId = "asset-db-008", Name = "Batarya Sağlık Kontrolü", Description = "Batarya kapasitesi ve şarj döngüsü kontrolü.", FrequencyDays = 90, StartDate = new DateOnly(2026, 8, 20), ResponsibleTechnician = "Mobil Destek Ekibi", IsActive = true, CreatedAt = createdAt },
+            new MaintenancePlan { Id = "maintenance-plan-006", AssetId = "asset-db-010", Name = "Yazıcı Periyodik Bakımı", Description = "Sarf ve baskı mekanizması kontrolü.", FrequencyDays = 60, StartDate = new DateOnly(2026, 7, 10), ResponsibleTechnician = "Teknik Ekip B", IsActive = true, CreatedAt = createdAt });
+
+        maintenanceTask.HasData(
+            new MaintenanceTask { Id = "maintenance-task-001", MaintenancePlanId = "maintenance-plan-001", AssetId = "asset-db-001", Title = "Periyodik Donanım Kontrolü", Description = "Genel donanım ve bağlantı kontrolleri.", PlannedDate = new DateOnly(2026, 8, 18), Status = MaintenanceTaskStatus.Planned, TechnicianName = "Teknik Ekip A", CreatedAt = createdAt },
+            new MaintenanceTask { Id = "maintenance-task-002", MaintenancePlanId = "maintenance-plan-002", AssetId = "asset-db-002", Title = "Fan ve Soğutma Bakımı", Description = "Fan temizliği ve sıcaklık kontrolü.", PlannedDate = new DateOnly(2026, 9, 15), Status = MaintenanceTaskStatus.Planned, TechnicianName = "Teknik Ekip B", CreatedAt = createdAt },
+            new MaintenanceTask { Id = "maintenance-task-003", MaintenancePlanId = "maintenance-plan-003", AssetId = "asset-db-003", Title = "Disk Sağlık Kontrolü", Description = "Disk sağlığı ve performans kontrolü.", PlannedDate = new DateOnly(2026, 8, 1), Status = MaintenanceTaskStatus.Planned, TechnicianName = "Teknik Ekip A", Notes = "Öncelikli kontrol edilecek.", CreatedAt = createdAt },
+            new MaintenanceTask { Id = "maintenance-task-004", MaintenancePlanId = "maintenance-plan-004", AssetId = "asset-db-006", Title = "Ekran ve Bağlantı Kontrolü", Description = "Panel, kablo ve girişlerin kontrolü.", PlannedDate = new DateOnly(2026, 10, 10), Status = MaintenanceTaskStatus.Planned, CreatedAt = createdAt },
+            new MaintenanceTask { Id = "maintenance-task-005", MaintenancePlanId = "maintenance-plan-005", AssetId = "asset-db-008", Title = "Batarya Sağlık Kontrolü", Description = "Batarya kapasitesi ve şarj döngüsü kontrolü.", PlannedDate = new DateOnly(2026, 8, 20), Status = MaintenanceTaskStatus.Planned, TechnicianName = "Mobil Destek Ekibi", CreatedAt = createdAt },
+            new MaintenanceTask { Id = "maintenance-task-006", MaintenancePlanId = "maintenance-plan-006", AssetId = "asset-db-010", Title = "Yazıcı Periyodik Bakımı", PlannedDate = new DateOnly(2026, 7, 10), CompletedDate = new DateOnly(2026, 7, 11), Status = MaintenanceTaskStatus.Completed, TechnicianName = "Teknik Ekip B", Notes = "Bakım tamamlandı.", CompletedBy = "Teknik Ekip B", Result = "Baskı ve besleme kontrolleri başarılı.", WorkNotes = "Temizlik yapıldı ve test çıktısı alındı.", CreatedAt = createdAt },
+            new MaintenanceTask { Id = "maintenance-task-007", MaintenancePlanId = "maintenance-plan-001", AssetId = "asset-db-001", Title = "Periyodik Donanım Kontrolü", PlannedDate = new DateOnly(2026, 5, 20), CompletedDate = new DateOnly(2026, 5, 20), Status = MaintenanceTaskStatus.Completed, TechnicianName = "Teknik Ekip A", Notes = "Sorun bulunmadı.", CompletedBy = "Teknik Ekip A", Result = "Donanım kontrolleri başarılı.", WorkNotes = "Bağlantılar ve sistem bileşenleri kontrol edildi.", CreatedAt = createdAt },
+            new MaintenanceTask { Id = "maintenance-task-008", MaintenancePlanId = "maintenance-plan-002", AssetId = "asset-db-002", Title = "Fan ve Soğutma Bakımı", PlannedDate = new DateOnly(2026, 7, 25), Status = MaintenanceTaskStatus.Planned, TechnicianName = "Teknik Ekip B", CreatedAt = createdAt },
+            new MaintenanceTask { Id = "maintenance-task-009", MaintenancePlanId = "maintenance-plan-003", AssetId = "asset-db-003", Title = "Disk Sağlık Kontrolü", PlannedDate = new DateOnly(2026, 8, 10), Status = MaintenanceTaskStatus.Cancelled, Notes = "Cihaz kullanımda olduğu için iptal edildi.", CancellationReason = "Cihaz operasyonel kullanımda olduğu için iptal edildi.", CreatedAt = createdAt },
+            new MaintenanceTask { Id = "maintenance-task-010", MaintenancePlanId = "maintenance-plan-006", AssetId = "asset-db-010", Title = "Yazıcı Periyodik Bakımı", PlannedDate = new DateOnly(2026, 9, 8), Status = MaintenanceTaskStatus.Planned, TechnicianName = "Teknik Ekip B", CreatedAt = createdAt });
+
+        ConfigureMaintenanceRequests(modelBuilder, createdAt);
+    }
+
+    private static void ConfigureMaintenanceRequests(
+        ModelBuilder modelBuilder,
+        DateTimeOffset createdAt)
+    {
+        var request = modelBuilder.Entity<MaintenanceRequest>();
+
+        request.ToTable("MaintenanceRequests");
+        request.HasKey(item => item.Id);
+        request.Property(item => item.Id).HasMaxLength(64);
+        request.Property(item => item.AssetId).HasMaxLength(64).IsRequired();
+        request.Property(item => item.Title).HasMaxLength(150).IsRequired();
+        request.Property(item => item.Description).HasMaxLength(2000).IsRequired();
+        request.Property(item => item.Priority).HasConversion<string>().HasMaxLength(30).IsRequired();
+        request.Property(item => item.Status).HasConversion<string>().HasMaxLength(30).IsRequired();
+        request.Property(item => item.RequestedBy).HasMaxLength(150).IsRequired();
+        request.Property(item => item.AssignedTechnician).HasMaxLength(150);
+        request.Property(item => item.CreatedAt).HasColumnType("datetimeoffset");
+        request.Property(item => item.UpdatedAt).HasColumnType("datetimeoffset");
+        request.Property(item => item.CompletedAt).HasColumnType("datetimeoffset");
+        request.Property(item => item.CompletedBy).HasMaxLength(150);
+        request.Property(item => item.Result).HasMaxLength(1000);
+        request.Property(item => item.WorkNotes).HasMaxLength(1000);
+        request.Property(item => item.CancellationReason).HasMaxLength(1000);
+        request.HasIndex(item => new { item.Status, item.Priority, item.CreatedAt })
+            .HasDatabaseName("IX_MaintenanceRequests_Status_Priority_CreatedAt");
+        request.HasOne(item => item.Asset)
+            .WithMany(asset => asset.MaintenanceRequests)
+            .HasForeignKey(item => item.AssetId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        request.HasData(
+            new MaintenanceRequest { Id = "maintenance-request-001", AssetId = "asset-db-001", Title = "Cihaz çok ısınıyor", Description = "Yoğun kullanım sırasında fan sürekli yüksek hızda çalışıyor.", Priority = MaintenanceRequestPriority.High, Status = MaintenanceRequestStatus.Open, RequestedBy = "Operasyon Kullanıcısı", CreatedAt = createdAt.AddDays(7), UpdatedAt = createdAt.AddDays(7) },
+            new MaintenanceRequest { Id = "maintenance-request-002", AssetId = "asset-db-010", Title = "Yazıcı çizgili basıyor", Description = "Renkli çıktılarda dikey çizgiler oluşuyor.", Priority = MaintenanceRequestPriority.Normal, Status = MaintenanceRequestStatus.Assigned, RequestedBy = "Finans Kullanıcısı", AssignedTechnician = "Teknik Ekip B", CreatedAt = createdAt.AddDays(8), UpdatedAt = createdAt.AddDays(9) },
+            new MaintenanceRequest { Id = "maintenance-request-003", AssetId = "asset-db-006", Title = "Görüntü aralıklı kesiliyor", Description = "Monitör görüntüsü kısa sürelerle kesiliyor.", Priority = MaintenanceRequestPriority.Critical, Status = MaintenanceRequestStatus.InProgress, RequestedBy = "Tasarım Kullanıcısı", AssignedTechnician = "Teknik Ekip A", CreatedAt = createdAt.AddDays(9), UpdatedAt = createdAt.AddDays(10) },
+            new MaintenanceRequest { Id = "maintenance-request-004", AssetId = "asset-db-002", Title = "USB bağlantısı çalışmıyor", Description = "Sol taraftaki USB bağlantı noktası cihazları algılamıyor.", Priority = MaintenanceRequestPriority.Low, Status = MaintenanceRequestStatus.Completed, RequestedBy = "Satış Kullanıcısı", AssignedTechnician = "Teknik Ekip B", CreatedAt = createdAt.AddDays(2), UpdatedAt = createdAt.AddDays(4), CompletedAt = createdAt.AddDays(4), CompletedBy = "Teknik Ekip B", Result = "Bağlantı sürücüsü yenilendi.", WorkNotes = "Sürücü kurulumu sonrası bağlantı test edildi." },
+            new MaintenanceRequest { Id = "maintenance-request-005", AssetId = "asset-db-008", Title = "Şarj süresi çok kısa", Description = "Batarya normalden hızlı tükeniyor.", Priority = MaintenanceRequestPriority.High, Status = MaintenanceRequestStatus.Cancelled, RequestedBy = "Saha Kullanıcısı", CreatedAt = createdAt.AddDays(3), UpdatedAt = createdAt.AddDays(5), CancellationReason = "Cihaz garanti servisine gönderildi." },
+            new MaintenanceRequest { Id = "maintenance-request-006", AssetId = "asset-db-004", Title = "Cihaz açılışta hata veriyor", Description = "İlk açılışta disk denetim uyarısı gösteriliyor.", Priority = MaintenanceRequestPriority.Critical, Status = MaintenanceRequestStatus.Open, RequestedBy = "Muhasebe Kullanıcısı", CreatedAt = createdAt.AddDays(11), UpdatedAt = createdAt.AddDays(11) },
+            new MaintenanceRequest { Id = "maintenance-request-007", AssetId = "asset-db-003", Title = "Klavye tuşu takılıyor", Description = "Enter tuşu zaman zaman takılı kalıyor.", Priority = MaintenanceRequestPriority.Normal, Status = MaintenanceRequestStatus.Completed, RequestedBy = "Destek Kullanıcısı", AssignedTechnician = "Teknik Ekip A", CreatedAt = createdAt.AddDays(1), UpdatedAt = createdAt.AddDays(6), CompletedAt = createdAt.AddDays(6), CompletedBy = "Teknik Ekip A", Result = "Klavye temizliği ve mekanik kontrol tamamlandı.", WorkNotes = "Tuş mekanizması temizlenerek tekrar test edildi." });
     }
 }

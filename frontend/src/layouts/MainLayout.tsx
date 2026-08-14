@@ -91,10 +91,12 @@ const menuItems: MenuProps['items'] = [
     icon: <ToolOutlined />,
     label: 'Bakım',
     children: [
+      { key: '/maintenance', icon: <ToolOutlined />, label: 'Bakım Merkezi' },
       { key: '/maintenance/plans', icon: <BuildOutlined />, label: 'Bakım Planları' },
       { key: '/maintenance/tasks', icon: <ToolOutlined />, label: 'Bakım Görevleri' },
+      { key: '/maintenance/requests', icon: <SolutionOutlined />, label: 'Bakım Talepleri' },
       { key: '/maintenance/history', icon: <HistoryOutlined />, label: 'Bakım Geçmişi' },
-      { key: '/my-maintenance-requests', icon: <UserOutlined />, label: 'Bakım Taleplerim' },
+      { key: '/maintenance/my-requests', icon: <UserOutlined />, label: 'Bakım Taleplerim' },
     ],
   },
   {
@@ -130,10 +132,12 @@ const getSelectedMenuKey = (pathname: string) => {
     '/warranties/expiring',
     '/licenses/expiring',
     '/my-licenses',
+    '/maintenance',
     '/maintenance/plans',
     '/maintenance/tasks',
+    '/maintenance/requests',
     '/maintenance/history',
-    '/my-maintenance-requests',
+    '/maintenance/my-requests',
     '/reports',
     '/admin/users',
     '/admin/categories',
@@ -150,7 +154,9 @@ const getSelectedMenuKey = (pathname: string) => {
   if (pathname.startsWith('/inventory/')) return '/assets'
   if (pathname.startsWith('/assignments/')) return '/assignments'
   if (pathname.startsWith('/licenses/')) return '/licenses'
+  if (pathname.startsWith('/maintenance/plans/')) return '/maintenance/plans'
   if (pathname.startsWith('/maintenance/tasks/')) return '/maintenance/tasks'
+  if (pathname.startsWith('/maintenance/requests/')) return '/maintenance/requests'
 
   return pathname
 }
@@ -161,7 +167,7 @@ const getOpenMenuKeys = (pathname: string) => {
   if (pathname.startsWith('/stock')) return ['stock-menu']
   if (pathname.startsWith('/warranties')) return ['warranties-menu']
   if (pathname.startsWith('/licenses') || pathname === '/my-licenses') return ['licenses-menu']
-  if (pathname.startsWith('/maintenance') || pathname === '/my-maintenance-requests') return ['maintenance-menu']
+  if (pathname.startsWith('/maintenance')) return ['maintenance-menu']
   if (pathname.startsWith('/admin')) return ['admin-menu']
 
   return []

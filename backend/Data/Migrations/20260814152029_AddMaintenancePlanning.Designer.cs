@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TakipProgrami.Api.Data;
 
@@ -11,9 +12,11 @@ using TakipProgrami.Api.Data;
 namespace TakipProgrami.Api.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260814152029_AddMaintenancePlanning")]
+    partial class AddMaintenancePlanning
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -447,13 +450,6 @@ namespace TakipProgrami.Api.Data.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
-                    b.Property<string>("ResponsibleTechnician")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)")
-                        .HasDefaultValue("Atanmamış");
-
                     b.Property<DateOnly>("StartDate")
                         .HasColumnType("date");
 
@@ -477,7 +473,6 @@ namespace TakipProgrami.Api.Data.Migrations
                             FrequencyDays = 90,
                             IsActive = true,
                             Name = "Periyodik Donanım Kontrolü",
-                            ResponsibleTechnician = "Teknik Ekip A",
                             StartDate = new DateOnly(2026, 8, 18)
                         },
                         new
@@ -489,7 +484,6 @@ namespace TakipProgrami.Api.Data.Migrations
                             FrequencyDays = 120,
                             IsActive = true,
                             Name = "Fan ve Soğutma Bakımı",
-                            ResponsibleTechnician = "Teknik Ekip B",
                             StartDate = new DateOnly(2026, 9, 15)
                         },
                         new
@@ -501,7 +495,6 @@ namespace TakipProgrami.Api.Data.Migrations
                             FrequencyDays = 60,
                             IsActive = true,
                             Name = "Disk Sağlık Kontrolü",
-                            ResponsibleTechnician = "Teknik Ekip A",
                             StartDate = new DateOnly(2026, 8, 1)
                         },
                         new
@@ -513,7 +506,6 @@ namespace TakipProgrami.Api.Data.Migrations
                             FrequencyDays = 180,
                             IsActive = true,
                             Name = "Ekran ve Bağlantı Kontrolü",
-                            ResponsibleTechnician = "Teknik Ekip B",
                             StartDate = new DateOnly(2026, 10, 10)
                         },
                         new
@@ -525,7 +517,6 @@ namespace TakipProgrami.Api.Data.Migrations
                             FrequencyDays = 90,
                             IsActive = true,
                             Name = "Batarya Sağlık Kontrolü",
-                            ResponsibleTechnician = "Mobil Destek Ekibi",
                             StartDate = new DateOnly(2026, 8, 20)
                         },
                         new
@@ -537,182 +528,7 @@ namespace TakipProgrami.Api.Data.Migrations
                             FrequencyDays = 60,
                             IsActive = true,
                             Name = "Yazıcı Periyodik Bakımı",
-                            ResponsibleTechnician = "Teknik Ekip B",
                             StartDate = new DateOnly(2026, 7, 10)
-                        });
-                });
-
-            modelBuilder.Entity("TakipProgrami.Api.Entities.MaintenanceRequest", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("AssetId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("AssignedTechnician")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<string>("CancellationReason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTimeOffset?>("CompletedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("CompletedBy")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("Priority")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<string>("RequestedBy")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<string>("Result")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("WorkNotes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AssetId");
-
-                    b.HasIndex("Status", "Priority", "CreatedAt")
-                        .HasDatabaseName("IX_MaintenanceRequests_Status_Priority_CreatedAt");
-
-                    b.ToTable("MaintenanceRequests", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = "maintenance-request-001",
-                            AssetId = "asset-db-001",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 8, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "Yoğun kullanım sırasında fan sürekli yüksek hızda çalışıyor.",
-                            Priority = "High",
-                            RequestedBy = "Operasyon Kullanıcısı",
-                            Status = "Open",
-                            Title = "Cihaz çok ısınıyor",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 8, 8, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = "maintenance-request-002",
-                            AssetId = "asset-db-010",
-                            AssignedTechnician = "Teknik Ekip B",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 9, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "Renkli çıktılarda dikey çizgiler oluşuyor.",
-                            Priority = "Normal",
-                            RequestedBy = "Finans Kullanıcısı",
-                            Status = "Assigned",
-                            Title = "Yazıcı çizgili basıyor",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 8, 10, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = "maintenance-request-003",
-                            AssetId = "asset-db-006",
-                            AssignedTechnician = "Teknik Ekip A",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 10, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "Monitör görüntüsü kısa sürelerle kesiliyor.",
-                            Priority = "Critical",
-                            RequestedBy = "Tasarım Kullanıcısı",
-                            Status = "InProgress",
-                            Title = "Görüntü aralıklı kesiliyor",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 8, 11, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = "maintenance-request-004",
-                            AssetId = "asset-db-002",
-                            AssignedTechnician = "Teknik Ekip B",
-                            CompletedAt = new DateTimeOffset(new DateTime(2026, 8, 5, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedBy = "Teknik Ekip B",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 3, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "Sol taraftaki USB bağlantı noktası cihazları algılamıyor.",
-                            Priority = "Low",
-                            RequestedBy = "Satış Kullanıcısı",
-                            Result = "Bağlantı sürücüsü yenilendi.",
-                            Status = "Completed",
-                            Title = "USB bağlantısı çalışmıyor",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 8, 5, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            WorkNotes = "Sürücü kurulumu sonrası bağlantı test edildi."
-                        },
-                        new
-                        {
-                            Id = "maintenance-request-005",
-                            AssetId = "asset-db-008",
-                            CancellationReason = "Cihaz garanti servisine gönderildi.",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 4, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "Batarya normalden hızlı tükeniyor.",
-                            Priority = "High",
-                            RequestedBy = "Saha Kullanıcısı",
-                            Status = "Cancelled",
-                            Title = "Şarj süresi çok kısa",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 8, 6, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = "maintenance-request-006",
-                            AssetId = "asset-db-004",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 12, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "İlk açılışta disk denetim uyarısı gösteriliyor.",
-                            Priority = "Critical",
-                            RequestedBy = "Muhasebe Kullanıcısı",
-                            Status = "Open",
-                            Title = "Cihaz açılışta hata veriyor",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 8, 12, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = "maintenance-request-007",
-                            AssetId = "asset-db-003",
-                            AssignedTechnician = "Teknik Ekip A",
-                            CompletedAt = new DateTimeOffset(new DateTime(2026, 8, 7, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedBy = "Teknik Ekip A",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 2, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "Enter tuşu zaman zaman takılı kalıyor.",
-                            Priority = "Normal",
-                            RequestedBy = "Destek Kullanıcısı",
-                            Result = "Klavye temizliği ve mekanik kontrol tamamlandı.",
-                            Status = "Completed",
-                            Title = "Klavye tuşu takılıyor",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 8, 7, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            WorkNotes = "Tuş mekanizması temizlenerek tekrar test edildi."
                         });
                 });
 
@@ -726,14 +542,6 @@ namespace TakipProgrami.Api.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("CancellationReason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("CompletedBy")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
 
                     b.Property<DateOnly?>("CompletedDate")
                         .HasColumnType("date");
@@ -757,10 +565,6 @@ namespace TakipProgrami.Api.Data.Migrations
                     b.Property<DateOnly>("PlannedDate")
                         .HasColumnType("date");
 
-                    b.Property<string>("Result")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -775,16 +579,11 @@ namespace TakipProgrami.Api.Data.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
-                    b.Property<string>("WorkNotes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AssetId");
 
                     b.HasIndex("MaintenancePlanId", "PlannedDate")
-                        .IsUnique()
                         .HasDatabaseName("IX_MaintenanceTasks_PlanId_PlannedDate");
 
                     b.ToTable("MaintenanceTasks", (string)null);
@@ -854,33 +653,27 @@ namespace TakipProgrami.Api.Data.Migrations
                         {
                             Id = "maintenance-task-006",
                             AssetId = "asset-db-010",
-                            CompletedBy = "Teknik Ekip B",
                             CompletedDate = new DateOnly(2026, 7, 11),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             MaintenancePlanId = "maintenance-plan-006",
                             Notes = "Bakım tamamlandı.",
                             PlannedDate = new DateOnly(2026, 7, 10),
-                            Result = "Baskı ve besleme kontrolleri başarılı.",
                             Status = "Completed",
                             TechnicianName = "Teknik Ekip B",
-                            Title = "Yazıcı Periyodik Bakımı",
-                            WorkNotes = "Temizlik yapıldı ve test çıktısı alındı."
+                            Title = "Yazıcı Periyodik Bakımı"
                         },
                         new
                         {
                             Id = "maintenance-task-007",
                             AssetId = "asset-db-001",
-                            CompletedBy = "Teknik Ekip A",
                             CompletedDate = new DateOnly(2026, 5, 20),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             MaintenancePlanId = "maintenance-plan-001",
                             Notes = "Sorun bulunmadı.",
                             PlannedDate = new DateOnly(2026, 5, 20),
-                            Result = "Donanım kontrolleri başarılı.",
                             Status = "Completed",
                             TechnicianName = "Teknik Ekip A",
-                            Title = "Periyodik Donanım Kontrolü",
-                            WorkNotes = "Bağlantılar ve sistem bileşenleri kontrol edildi."
+                            Title = "Periyodik Donanım Kontrolü"
                         },
                         new
                         {
@@ -897,7 +690,6 @@ namespace TakipProgrami.Api.Data.Migrations
                         {
                             Id = "maintenance-task-009",
                             AssetId = "asset-db-003",
-                            CancellationReason = "Cihaz operasyonel kullanımda olduğu için iptal edildi.",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             MaintenancePlanId = "maintenance-plan-003",
                             Notes = "Cihaz kullanımda olduğu için iptal edildi.",
@@ -1266,17 +1058,6 @@ namespace TakipProgrami.Api.Data.Migrations
                     b.Navigation("Asset");
                 });
 
-            modelBuilder.Entity("TakipProgrami.Api.Entities.MaintenanceRequest", b =>
-                {
-                    b.HasOne("TakipProgrami.Api.Entities.Asset", "Asset")
-                        .WithMany("MaintenanceRequests")
-                        .HasForeignKey("AssetId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Asset");
-                });
-
             modelBuilder.Entity("TakipProgrami.Api.Entities.MaintenanceTask", b =>
                 {
                     b.HasOne("TakipProgrami.Api.Entities.Asset", "Asset")
@@ -1310,8 +1091,6 @@ namespace TakipProgrami.Api.Data.Migrations
             modelBuilder.Entity("TakipProgrami.Api.Entities.Asset", b =>
                 {
                     b.Navigation("MaintenancePlans");
-
-                    b.Navigation("MaintenanceRequests");
 
                     b.Navigation("MaintenanceTasks");
                 });

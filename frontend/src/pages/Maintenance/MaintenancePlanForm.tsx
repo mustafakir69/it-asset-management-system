@@ -1,0 +1,16 @@
+import { Button, Col, DatePicker, Form, Input, InputNumber, Row, Select, Space } from 'antd'
+import type { Dayjs } from 'dayjs'
+import dayjs from 'dayjs'
+import type { Asset } from '../../types/asset'
+import type { MaintenancePlan, MaintenancePlanInput } from '../../types/maintenance'
+
+interface FormValues { assetId: string; name: string; description?: string; responsibleTechnician: string; frequencyDays: number; startDate: Dayjs }
+export interface MaintenancePlanFormProps { assets: Asset[]; initialPlan?: MaintenancePlan; submitting: boolean; onCancel: () => void; onSubmit: (input: MaintenancePlanInput) => Promise<void> }
+
+function MaintenancePlanForm({ assets, initialPlan, submitting, onCancel, onSubmit }: MaintenancePlanFormProps) {
+  const options = assets.filter((asset) => asset.status !== 'Hurda' && asset.status !== 'Elden çıkarıldı').map((asset) => ({ label: `${asset.assetCode} — ${asset.brand} ${asset.model}`, value: asset.id }))
+  const initialValues: Partial<FormValues> | undefined = initialPlan ? { assetId: initialPlan.assetId, name: initialPlan.name, description: initialPlan.description ?? undefined, responsibleTechnician: initialPlan.responsibleTechnician, frequencyDays: initialPlan.frequencyDays, startDate: dayjs(initialPlan.startDate) } : undefined
+  return <Form<FormValues> initialValues={initialValues} layout="vertical" onFinish={(values) => void onSubmit({ assetId: values.assetId, name: values.name.trim(), description: values.description?.trim() || undefined, responsibleTechnician: values.responsibleTechnician.trim(), frequencyDays: values.frequencyDays, startDate: values.startDate.format('YYYY-MM-DD') })} requiredMark="optional"><Row gutter={[16, 0]}><Col xs={24} md={12}><Form.Item label="Cihaz" name="assetId" rules={[{ required: true, message: 'Lütfen bir cihaz seçin.' }]}><Select showSearch optionFilterProp="label" options={options} placeholder="Cihaz seçin" /></Form.Item></Col><Col xs={24} md={12}><Form.Item label="Bakım Planı Adı" name="name" rules={[{ required: true, whitespace: true, message: 'Bakım planı adı zorunludur.' }, { max: 150 }]}><Input /></Form.Item></Col><Col xs={24} md={12}><Form.Item label="Sorumlu IT Personeli" name="responsibleTechnician" rules={[{ required: true, whitespace: true, message: 'Sorumlu IT personeli zorunludur.' }]}><Input /></Form.Item></Col><Col xs={24} md={12}><Form.Item label="Bakım Sıklığı (Gün)" name="frequencyDays" rules={[{ required: true, message: 'Bakım sıklığı zorunludur.' }, { type: 'number', min: 1, message: 'Bakım sıklığı en az 1 gün olmalıdır.' }]}><InputNumber min={1} precision={0} style={{ width: '100%' }} /></Form.Item></Col><Col xs={24} md={12}><Form.Item label="Başlangıç Tarihi" name="startDate" rules={[{ required: true, message: 'Başlangıç tarihi zorunludur.' }]}><DatePicker format="DD.MM.YYYY" style={{ width: '100%' }} /></Form.Item></Col><Col span={24}><Form.Item label="Açıklama" name="description" rules={[{ max: 1000 }]}><Input.TextArea rows={3} /></Form.Item></Col></Row><Space><Button htmlType="submit" loading={submitting} type="primary">{initialPlan ? 'Değişiklikleri Kaydet' : 'Kaydet'}</Button><Button disabled={submitting} onClick={onCancel}>İptal</Button></Space></Form>
+}
+
+export default MaintenancePlanForm
