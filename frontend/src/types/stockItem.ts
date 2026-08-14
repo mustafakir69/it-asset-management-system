@@ -37,6 +37,11 @@ export interface StockTransaction {
   note?: string
 }
 
+export interface StockTransactionListItem extends StockTransaction {
+  itemCode: string
+  itemName: string
+}
+
 export interface StockTransactionInput {
   transactionType: StockTransactionType
   quantity: number

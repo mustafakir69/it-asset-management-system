@@ -75,21 +75,21 @@ function StockItemDetailPage() {
       title: 'İşlem Tipi',
       dataIndex: 'transactionType',
       key: 'transactionType',
-      width: 110,
+      width: 100,
       render: (value: StockTransaction['transactionType']) => (
         <Tag color={value === 'Giriş' ? 'success' : 'orange'}>{value}</Tag>
       ),
     },
-    { title: 'Miktar', dataIndex: 'quantity', key: 'quantity', width: 90 },
+    { title: 'Miktar', dataIndex: 'quantity', key: 'quantity', width: 80 },
     {
       title: 'İşlem Tarihi',
       dataIndex: 'transactionDate',
       key: 'transactionDate',
-      width: 140,
+      width: 120,
       render: (value: string) => formatDate(value),
     },
-    { title: 'İşlemi Yapan / Teslim Alan', dataIndex: 'personName', key: 'personName', width: 220 },
-    { title: 'Not', dataIndex: 'note', key: 'note', render: (value?: string) => value || '—' },
+    { title: 'İşlemi Yapan / Teslim Alan', dataIndex: 'personName', key: 'personName', ellipsis: true, width: 185 },
+    { title: 'Not', dataIndex: 'note', key: 'note', ellipsis: true, render: (value?: string) => value || '—' },
   ]
 
   return (
@@ -124,12 +124,15 @@ function StockItemDetailPage() {
           </ContentCard>
           <ContentCard title="Son Stok Hareketleri">
             <Table<StockTransaction>
+              className="app-data-table"
               columns={columns}
               dataSource={transactions}
               locale={{ emptyText: <EmptyState description="Bu ürün için stok hareketi bulunmuyor." /> }}
               pagination={{ pageSize: 10, showSizeChanger: false }}
               rowKey="id"
-              scroll={{ x: 760 }}
+              scroll={{ x: 680 }}
+              size="small"
+              tableLayout="fixed"
             />
           </ContentCard>
         </Space>

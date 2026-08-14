@@ -1,0 +1,14 @@
+.expiring-warranties-content,
+.expiring-warranties-page .ant-table-wrapper {
+  width: 100%;
+}
+
+.expiring-warranties-page .ant-table-cell {
+  vertical-align: middle;
+}
+
+@media (max-width: 576px) {
+  .expiring-warranties-page .ant-pagination {
+    justify-content: flex-start;
+  }
+}

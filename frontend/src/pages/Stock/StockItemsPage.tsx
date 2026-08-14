@@ -152,7 +152,7 @@ function StockItemsPage() {
       title: 'Ürün Kodu',
       dataIndex: 'itemCode',
       key: 'itemCode',
-      width: 140,
+      width: 125,
       sorter: (first, second) => first.itemCode.localeCompare(second.itemCode, 'tr-TR'),
       render: (itemCode: string) => <Typography.Text strong>{itemCode}</Typography.Text>,
     },
@@ -160,35 +160,40 @@ function StockItemsPage() {
       title: 'Ürün Adı',
       dataIndex: 'name',
       key: 'name',
-      width: 180,
+      ellipsis: true,
+      width: 155,
       sorter: (first, second) => first.name.localeCompare(second.name, 'tr-TR'),
     },
     {
       title: 'Kategori',
       dataIndex: 'category',
       key: 'category',
-      width: 140,
+      ellipsis: true,
+      responsive: ['lg'],
+      width: 115,
     },
     {
       title: 'Marka / Model',
       dataIndex: 'brandModel',
       key: 'brandModel',
       ellipsis: true,
-      width: 190,
+      responsive: ['xl'],
+      width: 155,
     },
     {
       title: 'Birim',
       dataIndex: 'unit',
       key: 'unit',
       align: 'center',
-      width: 80,
+      responsive: ['lg'],
+      width: 70,
     },
     {
       title: 'Mevcut Stok',
       dataIndex: 'currentQuantity',
       key: 'currentQuantity',
       align: 'center',
-      width: 115,
+      width: 100,
       sorter: (first, second) => first.currentQuantity - second.currentQuantity,
     },
     {
@@ -196,20 +201,21 @@ function StockItemsPage() {
       dataIndex: 'minimumQuantity',
       key: 'minimumQuantity',
       align: 'center',
-      width: 115,
+      width: 100,
       sorter: (first, second) => first.minimumQuantity - second.minimumQuantity,
     },
     {
       title: 'Lokasyon',
       dataIndex: 'location',
       key: 'location',
-      width: 140,
+      ellipsis: true,
+      width: 120,
     },
     {
       title: 'Durum',
       key: 'status',
       align: 'center',
-      width: 90,
+      width: 85,
       render: (_value, item) => {
         const status = getStockStatus(item)
         return <Tag color={status === 'Kritik' ? 'error' : 'success'}>{status}</Tag>
@@ -219,8 +225,7 @@ function StockItemsPage() {
       title: 'İşlemler',
       key: 'actions',
       align: 'center',
-      fixed: 'right',
-      width: 88,
+      width: 72,
       render: (_value, item) => (
         <Dropdown menu={{ items: getActionItems(item) }} placement="bottomRight" trigger={['click']}>
           <Tooltip title="İşlemleri aç">
@@ -303,6 +308,7 @@ function StockItemsPage() {
             </Typography.Text>
 
             <Table<StockItem>
+              className="app-data-table"
               columns={columns}
               dataSource={filteredStockItems}
               locale={{
@@ -317,7 +323,9 @@ function StockItemsPage() {
                 showTotal: (total) => `Toplam ${total} kayıt`,
               }}
               rowKey="id"
-              scroll={{ x: 1198 }}
+              scroll={{ x: 1097 }}
+              size="small"
+              tableLayout="fixed"
             />
           </Space>
         )}

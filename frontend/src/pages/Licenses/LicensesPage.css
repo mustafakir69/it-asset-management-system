@@ -9,10 +9,6 @@
   vertical-align: middle;
 }
 
-.licenses-page .ant-table-cell-fix-right {
-  box-shadow: -6px 0 12px rgb(0 0 0 / 4%);
-}
-
 .licenses-page .ant-table-cell:nth-child(5),
 .licenses-page .ant-table-cell:nth-child(6),
 .licenses-page .ant-table-cell:nth-child(7) {

@@ -13,6 +13,7 @@ export type StatusType =
   | 'Yaklaşıyor'
   | 'Gecikmiş'
   | 'Tamamlandı'
+  | 'Kritik'
 
 export interface StatusTagProps {
   status: StatusType
@@ -31,6 +32,7 @@ const statusColors: Record<StatusType, string> = {
   Yaklaşıyor: 'gold',
   Gecikmiş: 'red',
   Tamamlandı: 'cyan',
+  Kritik: 'red',
 }
 
 function StatusTag({ status }: StatusTagProps) {

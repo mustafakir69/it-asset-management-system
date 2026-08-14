@@ -14,10 +14,6 @@
   vertical-align: middle;
 }
 
-.assets-page .ant-table-cell-fix-right {
-  box-shadow: -6px 0 12px rgb(0 0 0 / 4%);
-}
-
 .assets-page .asset-actions-button {
   width: 32px;
   padding-inline: 0;

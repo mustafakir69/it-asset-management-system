@@ -1,0 +1,16 @@
+.stock-transactions-content,
+.stock-transactions-page .ant-picker,
+.stock-transactions-page .ant-select,
+.stock-transactions-page .ant-table-wrapper {
+  width: 100%;
+}
+
+.stock-transactions-page .ant-table-cell {
+  vertical-align: middle;
+}
+
+@media (max-width: 576px) {
+  .stock-transactions-page .ant-pagination {
+    justify-content: flex-start;
+  }
+}

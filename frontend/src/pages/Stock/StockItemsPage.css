@@ -11,10 +11,6 @@
   vertical-align: middle;
 }
 
-.stock-items-page .ant-table-cell-fix-right {
-  box-shadow: -6px 0 12px rgb(0 0 0 / 4%);
-}
-
 .stock-items-page .ant-table-cell:nth-child(6),
 .stock-items-page .ant-table-cell:nth-child(7) {
   font-variant-numeric: tabular-nums;

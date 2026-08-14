@@ -3,7 +3,9 @@ import MainLayout from '../layouts/MainLayout'
 import AssignmentCreatePage from '../pages/Assignments/AssignmentCreatePage'
 import AssignmentDetailPage from '../pages/Assignments/AssignmentDetailPage'
 import AssignmentHistoryPage from '../pages/Assignments/AssignmentHistoryPage'
+import AssignmentReturnsPage from '../pages/Assignments/AssignmentReturnsPage'
 import AssignmentsPage from '../pages/Assignments/AssignmentsPage'
+import MyAssignmentsPage from '../pages/Assignments/MyAssignmentsPage'
 import AssetCreatePage from '../pages/Assets/AssetCreatePage'
 import AssetDetailPage from '../pages/Assets/AssetDetailPage'
 import AssetEditPage from '../pages/Assets/AssetEditPage'
@@ -12,12 +14,16 @@ import DashboardPage from '../pages/Dashboard/DashboardPage'
 import LicenseCreatePage from '../pages/Licenses/LicenseCreatePage'
 import LicenseDetailPage from '../pages/Licenses/LicenseDetailPage'
 import LicenseEditPage from '../pages/Licenses/LicenseEditPage'
+import ExpiringLicensesPage from '../pages/Licenses/ExpiringLicensesPage'
 import LicensesPage from '../pages/Licenses/LicensesPage'
 import NotFoundPage from '../pages/NotFoundPage'
 import PlaceholderPage from '../pages/PlaceholderPage'
 import StockItemCreatePage from '../pages/Stock/StockItemCreatePage'
 import StockItemDetailPage from '../pages/Stock/StockItemDetailPage'
 import StockItemsPage from '../pages/Stock/StockItemsPage'
+import CriticalStockPage from '../pages/Stock/CriticalStockPage'
+import StockTransactionsPage from '../pages/Stock/StockTransactionsPage'
+import ExpiringWarrantiesPage from '../pages/Warranties/ExpiringWarrantiesPage'
 import WarrantiesPage from '../pages/Warranties/WarrantiesPage'
 
 export const router = createBrowserRouter([
@@ -45,20 +51,21 @@ export const router = createBrowserRouter([
       { path: 'inventory/:deviceId/edit', element: <PlaceholderPage title="Cihaz Düzenleme" /> },
       { path: 'assignments', element: <AssignmentsPage /> },
       { path: 'assignments/new', element: <AssignmentCreatePage /> },
-      { path: 'assignments/returns', element: <PlaceholderPage title="İade İşlemleri" /> },
+      { path: 'assignments/returns', element: <AssignmentReturnsPage /> },
       { path: 'assignments/history', element: <AssignmentHistoryPage /> },
       { path: 'assignments/:id', element: <AssignmentDetailPage /> },
-      { path: 'my-assignments', element: <PlaceholderPage title="Zimmetlerim" /> },
+      { path: 'my-assignments', element: <MyAssignmentsPage /> },
       { path: 'stock', element: <StockItemsPage /> },
       { path: 'stock/new', element: <StockItemCreatePage /> },
-      { path: 'stock/movements', element: <PlaceholderPage title="Stok Hareketleri" /> },
-      { path: 'stock/critical', element: <PlaceholderPage title="Kritik Stoklar" /> },
+      { path: 'stock/transactions', element: <StockTransactionsPage /> },
+      { path: 'stock/movements', element: <Navigate to="/stock/transactions" replace /> },
+      { path: 'stock/critical', element: <CriticalStockPage /> },
       { path: 'stock/:id', element: <StockItemDetailPage /> },
       { path: 'warranties', element: <WarrantiesPage /> },
-      { path: 'warranties/expiring', element: <PlaceholderPage title="Süresi Yaklaşan Garantiler" /> },
+      { path: 'warranties/expiring', element: <ExpiringWarrantiesPage /> },
       { path: 'licenses', element: <LicensesPage /> },
       { path: 'licenses/new', element: <LicenseCreatePage /> },
-      { path: 'licenses/expiring', element: <PlaceholderPage title="Süresi Yaklaşan Lisanslar" /> },
+      { path: 'licenses/expiring', element: <ExpiringLicensesPage /> },
       { path: 'licenses/:id/edit', element: <LicenseEditPage /> },
       { path: 'licenses/:id', element: <LicenseDetailPage /> },
       { path: 'my-licenses', element: <PlaceholderPage title="Lisanslarım" /> },

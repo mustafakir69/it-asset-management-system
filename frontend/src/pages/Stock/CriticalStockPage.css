@@ -1,0 +1,14 @@
+.critical-stock-content,
+.critical-stock-page .ant-table-wrapper {
+  width: 100%;
+}
+
+.critical-stock-page .ant-table-cell {
+  vertical-align: middle;
+}
+
+@media (max-width: 576px) {
+  .critical-stock-page .ant-pagination {
+    justify-content: flex-start;
+  }
+}

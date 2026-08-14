@@ -127,13 +127,13 @@ function AssignmentsPage() {
       title: 'Varlık Kodu',
       dataIndex: 'assetCode',
       key: 'assetCode',
-      width: 150,
+      width: 130,
       render: (assetCode: string) => <Typography.Text strong>{assetCode}</Typography.Text>,
     },
     {
       title: 'Cihaz',
       key: 'asset',
-      width: 220,
+      width: 175,
       render: (_value, assignment) => (
         <Flex vertical>
           <Typography.Text strong>{assignment.assetBrand}</Typography.Text>
@@ -145,32 +145,36 @@ function AssignmentsPage() {
       title: 'Çalışan',
       dataIndex: 'employeeName',
       key: 'employeeName',
-      width: 190,
+      ellipsis: true,
+      width: 150,
     },
     {
       title: 'Departman',
       dataIndex: 'department',
       key: 'department',
-      width: 190,
+      ellipsis: true,
+      responsive: ['lg'],
+      width: 145,
     },
     {
       title: 'Zimmet Tarihi',
       dataIndex: 'assignedAt',
       key: 'assignedAt',
-      width: 150,
+      width: 120,
       render: (assignedAt: string) => formatDate(assignedAt),
     },
     {
       title: 'Zimmetleyen',
       dataIndex: 'assignedBy',
       key: 'assignedBy',
-      width: 170,
+      ellipsis: true,
+      responsive: ['xl'],
+      width: 135,
     },
     {
       title: 'İşlemler',
       key: 'actions',
-      fixed: 'right',
-      width: 190,
+      width: 165,
       render: (_value, assignment) => (
         <Space size={0}>
           <Button
@@ -250,6 +254,7 @@ function AssignmentsPage() {
             </Typography.Text>
 
             <Table<Assignment>
+              className="app-data-table"
               columns={columns}
               dataSource={filteredAssignments}
               locale={{
@@ -264,7 +269,9 @@ function AssignmentsPage() {
                 showTotal: (total) => `Toplam ${total} aktif zimmet`,
               }}
               rowKey="id"
-              scroll={{ x: 1260 }}
+              scroll={{ x: 1020 }}
+              size="small"
+              tableLayout="fixed"
             />
           </Space>
         )}

@@ -4,6 +4,7 @@ import type {
   StockItemInput,
   StockTransaction,
   StockTransactionInput,
+  StockTransactionListItem,
   StockTransactionType,
 } from '../types/stockItem'
 import { apiClient } from './api'
@@ -17,6 +18,7 @@ export interface StockService {
     transaction: StockTransactionInput,
   ) => Promise<StockTransaction>
   getStockTransactions: (stockItemId: string) => Promise<StockTransaction[]>
+  getAllStockTransactions: () => Promise<StockTransactionListItem[]>
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -106,6 +108,20 @@ const mapStockTransactionResponse = (value: unknown): StockTransaction => {
     transactionDate,
     personName,
     note: typeof note === 'string' ? note : undefined,
+  }
+}
+
+const mapStockTransactionListResponse = (value: unknown): StockTransactionListItem => {
+  const transaction = mapStockTransactionResponse(value)
+
+  if (!isRecord(value) || typeof value.itemCode !== 'string' || typeof value.itemName !== 'string') {
+    throw new Error('API stok hareket listesi verilerini beklenen formatta döndürmedi.')
+  }
+
+  return {
+    ...transaction,
+    itemCode: value.itemCode,
+    itemName: value.itemName,
   }
 }
 
@@ -213,6 +229,20 @@ export const stockService: StockService = {
       }
 
       return response.data.map(mapStockTransactionResponse)
+    } catch (error: unknown) {
+      throw new Error(getApiErrorMessage(error, 'Stok hareketleri alınamadı.'))
+    }
+  },
+
+  getAllStockTransactions: async () => {
+    try {
+      const response = await apiClient.get<unknown>('/api/stock-transactions')
+
+      if (!Array.isArray(response.data)) {
+        throw new Error('API stok hareket listesi beklenen formatta değil.')
+      }
+
+      return response.data.map(mapStockTransactionListResponse)
     } catch (error: unknown) {
       throw new Error(getApiErrorMessage(error, 'Stok hareketleri alınamadı.'))
     }

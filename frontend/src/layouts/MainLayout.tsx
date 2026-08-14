@@ -63,7 +63,7 @@ const menuItems: MenuProps['items'] = [
     label: 'Stok',
     children: [
       { key: '/stock', icon: <DatabaseOutlined />, label: 'Stok Durumu' },
-      { key: '/stock/movements', icon: <SwapOutlined />, label: 'Stok Hareketleri' },
+      { key: '/stock/transactions', icon: <SwapOutlined />, label: 'Stok Hareketleri' },
       { key: '/stock/critical', icon: <WarningOutlined />, label: 'Kritik Stoklar' },
     ],
   },
@@ -125,7 +125,7 @@ const getSelectedMenuKey = (pathname: string) => {
     '/assignments/returns',
     '/assignments/history',
     '/my-assignments',
-    '/stock/movements',
+    '/stock/transactions',
     '/stock/critical',
     '/warranties/expiring',
     '/licenses/expiring',

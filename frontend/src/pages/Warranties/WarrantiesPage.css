@@ -9,10 +9,6 @@
   vertical-align: middle;
 }
 
-.warranties-page .ant-table-cell-fix-right {
-  box-shadow: -6px 0 12px rgb(0 0 0 / 4%);
-}
-
 .warranties-page .warranty-row-approaching > .ant-table-cell {
   background: #fffbe6;
 }

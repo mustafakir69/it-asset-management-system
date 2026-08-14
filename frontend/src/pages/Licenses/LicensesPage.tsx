@@ -200,7 +200,7 @@ function LicensesPage() {
       title: 'Lisans Kodu',
       dataIndex: 'licenseCode',
       key: 'licenseCode',
-      width: 145,
+      width: 125,
       sorter: (first, second) => first.licenseCode.localeCompare(second.licenseCode, 'tr-TR'),
       render: (value: string) => <Typography.Text strong>{value}</Typography.Text>,
     },
@@ -208,31 +208,32 @@ function LicensesPage() {
       title: 'Ürün',
       dataIndex: 'productName',
       key: 'productName',
-      width: 220,
+      ellipsis: true,
+      width: 170,
       sorter: (first, second) => first.productName.localeCompare(second.productName, 'tr-TR'),
     },
-    { title: 'Sağlayıcı', dataIndex: 'vendor', key: 'vendor', width: 130 },
-    { title: 'Lisans Türü', dataIndex: 'licenseType', key: 'licenseType', width: 155 },
+    { title: 'Sağlayıcı', dataIndex: 'vendor', key: 'vendor', ellipsis: true, responsive: ['lg'], width: 105 },
+    { title: 'Lisans Türü', dataIndex: 'licenseType', key: 'licenseType', ellipsis: true, responsive: ['xl'], width: 115 },
     {
-      title: 'Toplam Lisans Hakkı',
+      title: <span>Toplam Lisans<br />Hakkı</span>,
       dataIndex: 'totalSeats',
       key: 'totalSeats',
       align: 'center',
-      width: 150,
+      width: 105,
     },
     {
       title: 'Kullanılan',
       dataIndex: 'usedSeats',
       key: 'usedSeats',
       align: 'center',
-      width: 105,
+      width: 85,
     },
     {
       title: 'Kalan',
       dataIndex: 'availableSeats',
       key: 'availableSeats',
       align: 'center',
-      width: 90,
+      width: 75,
       sorter: (first, second) => first.availableSeats - second.availableSeats,
     },
     {
@@ -240,7 +241,8 @@ function LicensesPage() {
       dataIndex: 'startDate',
       key: 'startDate',
       align: 'center',
-      width: 120,
+      responsive: ['xl'],
+      width: 105,
       render: (value: string) => formatDate(value),
     },
     {
@@ -248,7 +250,7 @@ function LicensesPage() {
       dataIndex: 'expirationDate',
       key: 'expirationDate',
       align: 'center',
-      width: 120,
+      width: 105,
       sorter: (first, second) => compareNullableDate(first.expirationDate, second.expirationDate),
       render: (value: string | null) => formatDate(value),
     },
@@ -257,15 +259,14 @@ function LicensesPage() {
       dataIndex: 'licenseStatus',
       key: 'licenseStatus',
       align: 'center',
-      width: 125,
+      width: 110,
       render: (status: LicenseStatus) => <Tag color={statusColors[status]}>{status}</Tag>,
     },
     {
       title: 'İşlemler',
       key: 'actions',
       align: 'center',
-      fixed: 'right',
-      width: 88,
+      width: 72,
       render: (_value, license) => (
         <Dropdown menu={{ items: getActionItems(license) }} placement="bottomRight" trigger={['click']}>
           <Tooltip title="İşlemleri aç">
@@ -348,6 +349,7 @@ function LicensesPage() {
               </Typography.Text>
 
               <Table<License>
+                className="app-data-table"
                 columns={columns}
                 dataSource={filteredLicenses}
                 locale={{ emptyText: <EmptyState description="Filtrelere uygun lisans bulunamadı." /> }}
@@ -360,7 +362,9 @@ function LicensesPage() {
                   showTotal: (total) => `Toplam ${total} kayıt`,
                 }}
                 rowKey="id"
-                scroll={{ x: 1448 }}
+                scroll={{ x: 1172 }}
+                size="small"
+                tableLayout="fixed"
               />
             </Space>
           </ContentCard>

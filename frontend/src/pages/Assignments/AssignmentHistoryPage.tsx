@@ -1,6 +1,6 @@
-import { ClearOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons'
-import { Button, Col, Flex, Input, Row, Select, Space, Table, Typography } from 'antd'
-import type { TableColumnsType, TablePaginationConfig } from 'antd'
+import { ClearOutlined, EyeOutlined, MoreOutlined, SearchOutlined } from '@ant-design/icons'
+import { Button, Col, Dropdown, Flex, Input, Row, Select, Space, Table, Tooltip, Typography } from 'antd'
+import type { MenuProps, TableColumnsType, TablePaginationConfig } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -111,18 +111,27 @@ function AssignmentHistoryPage() {
     })
   }
 
+  const getActionItems = (assignment: Assignment): MenuProps['items'] => [
+    {
+      key: 'view',
+      icon: <EyeOutlined />,
+      label: 'Görüntüle',
+      onClick: () => void navigate(`/assignments/${assignment.id}`),
+    },
+  ]
+
   const columns: TableColumnsType<Assignment> = [
     {
       title: 'Varlık Kodu',
       dataIndex: 'assetCode',
       key: 'assetCode',
-      width: 150,
+      width: 125,
       render: (assetCode: string) => <Typography.Text strong>{assetCode}</Typography.Text>,
     },
     {
       title: 'Cihaz',
       key: 'asset',
-      width: 220,
+      width: 165,
       render: (_value, assignment) => (
         <Flex vertical>
           <Typography.Text strong>{assignment.assetBrand}</Typography.Text>
@@ -134,54 +143,64 @@ function AssignmentHistoryPage() {
       title: 'Çalışan',
       dataIndex: 'employeeName',
       key: 'employeeName',
-      width: 190,
+      ellipsis: true,
+      width: 145,
     },
     {
       title: 'Departman',
       dataIndex: 'department',
       key: 'department',
-      width: 190,
+      ellipsis: true,
+      responsive: ['lg'],
+      width: 140,
     },
     {
       title: 'Zimmet Tarihi',
       dataIndex: 'assignedAt',
       key: 'assignedAt',
-      width: 150,
+      width: 115,
       render: (assignedAt: string) => formatDate(assignedAt),
     },
     {
       title: 'İade Tarihi',
       dataIndex: 'returnedAt',
       key: 'returnedAt',
-      width: 145,
+      width: 115,
       render: (returnedAt: string | null) => returnedAt ? formatDate(returnedAt) : '—',
     },
     {
       title: 'Durum',
       key: 'status',
-      width: 130,
+      width: 110,
       render: (_value, assignment) => <StatusTag status={getAssignmentStatus(assignment)} />,
     },
     {
       title: 'Zimmetleyen',
       dataIndex: 'assignedBy',
       key: 'assignedBy',
-      width: 170,
+      ellipsis: true,
+      responsive: ['xl'],
+      width: 130,
     },
     {
       title: 'İşlemler',
       key: 'actions',
-      fixed: 'right',
-      width: 120,
+      align: 'center',
+      width: 72,
       render: (_value, assignment) => (
-        <Button
-          icon={<EyeOutlined />}
-          onClick={() => void navigate(`/assignments/${assignment.id}`)}
-          size="small"
-          type="link"
+        <Dropdown
+          menu={{ items: getActionItems(assignment) }}
+          placement="bottomRight"
+          trigger={['click']}
         >
-          Görüntüle
-        </Button>
+          <Tooltip title="İşlemleri aç">
+            <Button
+              aria-label={`${assignment.assetCode} için işlemleri aç`}
+              icon={<MoreOutlined />}
+              size="small"
+            />
+          </Tooltip>
+        </Dropdown>
       ),
     },
   ]
@@ -243,6 +262,7 @@ function AssignmentHistoryPage() {
             </Typography.Text>
 
             <Table<Assignment>
+              className="app-data-table"
               columns={columns}
               dataSource={filteredAssignments}
               locale={{
@@ -257,7 +277,9 @@ function AssignmentHistoryPage() {
                 showTotal: (total) => `Toplam ${total} zimmet kaydı`,
               }}
               rowKey="id"
-              scroll={{ x: 1490 }}
+              scroll={{ x: 1117 }}
+              size="small"
+              tableLayout="fixed"
             />
           </Space>
         )}

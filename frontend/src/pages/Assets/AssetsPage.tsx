@@ -142,7 +142,7 @@ function AssetsPage() {
       title: 'Varlık Kodu',
       dataIndex: 'assetCode',
       key: 'assetCode',
-      width: 130,
+      width: 120,
       sorter: (first, second) => first.assetCode.localeCompare(second.assetCode, 'tr-TR'),
       render: (assetCode: string) => <Typography.Text strong>{assetCode}</Typography.Text>,
     },
@@ -151,12 +151,13 @@ function AssetsPage() {
       dataIndex: 'category',
       key: 'category',
       ellipsis: true,
-      width: 140,
+      responsive: ['lg'],
+      width: 120,
     },
     {
       title: 'Marka / Model',
       key: 'brandModel',
-      width: 185,
+      width: 165,
       sorter: (first, second) =>
         `${first.brand} ${first.model}`.localeCompare(`${second.brand} ${second.model}`, 'tr-TR'),
       render: (_value, asset) => (
@@ -171,13 +172,14 @@ function AssetsPage() {
       dataIndex: 'serialNumber',
       key: 'serialNumber',
       ellipsis: true,
-      width: 145,
+      responsive: ['md'],
+      width: 130,
     },
     {
       title: 'Durum',
       dataIndex: 'status',
       key: 'status',
-      width: 105,
+      width: 100,
       render: (status: AssetStatus) => <StatusTag status={status} />,
     },
     {
@@ -185,7 +187,7 @@ function AssetsPage() {
       dataIndex: 'location',
       key: 'location',
       ellipsis: true,
-      width: 135,
+      width: 120,
     },
     {
       title: <span className="asset-date-heading">Satın Alma<br />Tarihi</span>,
@@ -193,7 +195,8 @@ function AssetsPage() {
       key: 'purchaseDate',
       align: 'center',
       className: 'asset-date-column',
-      width: 130,
+      responsive: ['xl'],
+      width: 112,
       sorter: (first, second) => first.purchaseDate.localeCompare(second.purchaseDate),
       render: (purchaseDate: string) => formatDate(purchaseDate),
     },
@@ -203,7 +206,7 @@ function AssetsPage() {
       key: 'warrantyEndDate',
       align: 'center',
       className: 'asset-date-column',
-      width: 140,
+      width: 120,
       sorter: (first, second) => first.warrantyEndDate.localeCompare(second.warrantyEndDate),
       render: (warrantyEndDate: string) => formatDate(warrantyEndDate),
     },
@@ -211,8 +214,7 @@ function AssetsPage() {
       title: 'İşlemler',
       key: 'actions',
       align: 'center',
-      fixed: 'right',
-      width: 88,
+      width: 72,
       render: (_value, asset) => (
         <Dropdown menu={{ items: getActionItems(asset) }} placement="bottomRight" trigger={['click']}>
           <Tooltip title="İşlemleri aç">
@@ -296,6 +298,7 @@ function AssetsPage() {
             <Typography.Text type="secondary">{filteredAssets.length} kayıt bulundu</Typography.Text>
 
             <Table<Asset>
+              className="app-data-table"
               columns={columns}
               dataSource={filteredAssets}
               loading={isLoading}
@@ -311,7 +314,8 @@ function AssetsPage() {
                 showTotal: (total) => `Toplam ${total} kayıt`,
               }}
               rowKey="id"
-              scroll={{ x: 1198 }}
+              scroll={{ x: 1059 }}
+              size="small"
               tableLayout="fixed"
             />
           </Space>

@@ -4,12 +4,14 @@ import {
   ClockCircleOutlined,
   CloseCircleOutlined,
   EyeOutlined,
+  MoreOutlined,
   QuestionCircleOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
 import {
   Button,
   Col,
+  Dropdown,
   Input,
   Row,
   Select,
@@ -17,9 +19,10 @@ import {
   Statistic,
   Table,
   Tag,
+  Tooltip,
   Typography,
 } from 'antd'
-import type { TableColumnsType, TablePaginationConfig } from 'antd'
+import type { MenuProps, TableColumnsType, TablePaginationConfig } from 'antd'
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -166,19 +169,28 @@ function WarrantiesPage() {
     })
   }
 
+  const getActionItems = (item: WarrantyAsset): MenuProps['items'] => [
+    {
+      key: 'view',
+      icon: <EyeOutlined />,
+      label: 'Görüntüle',
+      onClick: () => void navigate(`/assets/${item.assetId}`),
+    },
+  ]
+
   const columns: TableColumnsType<WarrantyAsset> = [
     {
       title: 'Cihaz Kodu',
       dataIndex: 'assetCode',
       key: 'assetCode',
-      width: 145,
+      width: 125,
       sorter: (first, second) => first.assetCode.localeCompare(second.assetCode, 'tr-TR'),
       render: (value: string) => <Typography.Text strong>{value}</Typography.Text>,
     },
     {
       title: 'Cihaz',
       key: 'device',
-      width: 210,
+      width: 170,
       render: (_value, item) => (
         <Space direction="vertical" size={0}>
           <Typography.Text strong>{item.brand}</Typography.Text>
@@ -186,14 +198,15 @@ function WarrantiesPage() {
         </Space>
       ),
     },
-    { title: 'Seri No', dataIndex: 'serialNumber', key: 'serialNumber', width: 170 },
-    { title: 'Lokasyon', dataIndex: 'location', key: 'location', width: 150 },
+    { title: 'Seri No', dataIndex: 'serialNumber', key: 'serialNumber', ellipsis: true, responsive: ['md'], width: 135 },
+    { title: 'Lokasyon', dataIndex: 'location', key: 'location', ellipsis: true, responsive: ['lg'], width: 125 },
     {
       title: 'Satın Alma Tarihi',
       dataIndex: 'purchaseDate',
       key: 'purchaseDate',
       align: 'center',
-      width: 145,
+      responsive: ['xl'],
+      width: 115,
       render: (value: string) => formatDate(value),
     },
     {
@@ -201,7 +214,7 @@ function WarrantiesPage() {
       dataIndex: 'warrantyEndDate',
       key: 'warrantyEndDate',
       align: 'center',
-      width: 160,
+      width: 125,
       sorter: (first, second) =>
         compareNullableDate(first.warrantyEndDate, second.warrantyEndDate),
       render: (value: string | null) => formatDate(value),
@@ -211,7 +224,7 @@ function WarrantiesPage() {
       dataIndex: 'remainingDays',
       key: 'remainingDays',
       align: 'center',
-      width: 130,
+      width: 110,
       sorter: (first, second) =>
         compareNullableNumber(first.remainingDays, second.remainingDays),
       render: (value: number | null) => formatRemainingDays(value),
@@ -221,23 +234,28 @@ function WarrantiesPage() {
       dataIndex: 'warrantyStatus',
       key: 'warrantyStatus',
       align: 'center',
-      width: 155,
+      width: 125,
       render: (status: WarrantyStatus) => <WarrantyStatusTag status={status} />,
     },
     {
       title: 'İşlemler',
       key: 'actions',
       align: 'center',
-      fixed: 'right',
-      width: 120,
+      width: 72,
       render: (_value, item) => (
-        <Button
-          icon={<EyeOutlined />}
-          onClick={() => void navigate(`/assets/${item.assetId}`)}
-          type="link"
+        <Dropdown
+          menu={{ items: getActionItems(item) }}
+          placement="bottomRight"
+          trigger={['click']}
         >
-          Görüntüle
-        </Button>
+          <Tooltip title="İşlemleri aç">
+            <Button
+              aria-label={`${item.assetCode} için işlemleri aç`}
+              icon={<MoreOutlined />}
+              size="small"
+            />
+          </Tooltip>
+        </Dropdown>
       ),
     },
   ]
@@ -314,6 +332,7 @@ function WarrantiesPage() {
               </Typography.Text>
 
               <Table<WarrantyAsset>
+                className="app-data-table"
                 columns={columns}
                 dataSource={filteredWarranties}
                 locale={{
@@ -331,7 +350,9 @@ function WarrantiesPage() {
                   item.warrantyStatus === 'Yaklaşıyor' ? 'warranty-row-approaching' : ''
                 }
                 rowKey="assetId"
-                scroll={{ x: 1335 }}
+                scroll={{ x: 1102 }}
+                size="small"
+                tableLayout="fixed"
               />
             </Space>
           </ContentCard>
