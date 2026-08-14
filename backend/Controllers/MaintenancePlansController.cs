@@ -1,12 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TakipProgrami.Api.Data;
 using TakipProgrami.Api.DTOs;
 using TakipProgrami.Api.Entities;
+using TakipProgrami.Api.Helpers;
 
 namespace TakipProgrami.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/maintenance/plans")]
 public sealed class MaintenancePlansController(ApplicationDbContext dbContext) : ControllerBase
 {
@@ -28,6 +31,7 @@ public sealed class MaintenancePlansController(ApplicationDbContext dbContext) :
     }
 
     [HttpPost]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     public async Task<ActionResult<MaintenancePlanDto>> Create(
         MaintenancePlanCreateDto request,
         CancellationToken cancellationToken)
@@ -58,6 +62,7 @@ public sealed class MaintenancePlansController(ApplicationDbContext dbContext) :
     }
 
     [HttpPut("{id}")]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     public async Task<ActionResult<MaintenancePlanDto>> Update(
         string id,
         MaintenancePlanUpdateDto request,
@@ -82,6 +87,7 @@ public sealed class MaintenancePlansController(ApplicationDbContext dbContext) :
     }
 
     [HttpPut("{id}/status")]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     public async Task<ActionResult<MaintenancePlanDto>> UpdateStatus(
         string id,
         MaintenancePlanStatusDto request,

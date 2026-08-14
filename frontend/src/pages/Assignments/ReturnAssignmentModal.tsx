@@ -39,7 +39,7 @@ function ReturnAssignmentModal({
 
   const handleFinish = async (values: ReturnFormValues) => {
     await onSubmit({
-      returnedAt: values.returnedAt.format('YYYY-MM-DD'),
+      returnedAt: values.returnedAt.toISOString(),
       returnedBy: values.returnedBy.trim(),
       returnNotes: values.returnNotes?.trim() || null,
     })

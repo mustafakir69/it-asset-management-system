@@ -29,8 +29,12 @@ function AssignmentReturnsPage() {
 
     try {
       setAssignments(await assignmentService.getActiveAssignments())
-    } catch {
-      setLoadError('İade alınabilecek aktif zimmetler yüklenirken bir hata oluştu.')
+    } catch (error: unknown) {
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : 'İade alınabilecek aktif zimmetler yüklenirken bir hata oluştu.',
+      )
     } finally {
       setIsLoading(false)
     }

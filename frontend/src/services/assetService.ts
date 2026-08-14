@@ -1,5 +1,4 @@
 import axios from 'axios'
-import { mockAssets } from '../mocks/assets'
 import {
   assetCategories,
   assetLocations,
@@ -17,12 +16,7 @@ export interface AssetService {
   getAssetById: (id: string) => Promise<Asset | undefined>
   createAsset: (asset: AssetInput) => Promise<Asset>
   updateAsset: (id: string, asset: AssetInput) => Promise<Asset>
-  updateAssetStatus: (id: string, status: AssetStatus) => Promise<Asset>
 }
-
-let assignmentAssetStore: Asset[] = mockAssets.map((asset) => ({ ...asset }))
-
-const cloneAsset = (asset: Asset): Asset => ({ ...asset })
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
@@ -179,20 +173,5 @@ export const assetService: AssetService = {
     } catch (error: unknown) {
       throw new Error(getApiErrorMessage(error, 'Cihaz bilgileri güncellenemedi.'))
     }
-  },
-
-  updateAssetStatus: (id, status) => {
-    const asset = assignmentAssetStore.find((current) => current.id === id)
-
-    if (!asset) {
-      return Promise.reject(new Error('Durumu güncellenecek cihaz bulunamadı.'))
-    }
-
-    const updatedAsset: Asset = { ...asset, status }
-    assignmentAssetStore = assignmentAssetStore.map((current) =>
-      current.id === id ? updatedAsset : current,
-    )
-
-    return Promise.resolve(cloneAsset(updatedAsset))
   },
 }

@@ -1,58 +1,67 @@
+import type { StatusType } from '../components/StatusTag/StatusTag'
+
 export type DashboardSummaryKey =
-  | 'totalDevices'
-  | 'inStockDevices'
-  | 'assignedDevices'
-  | 'maintenanceDevices'
+  | 'totalAssets'
+  | 'inStockAssets'
+  | 'assignedAssets'
+  | 'maintenanceAssets'
   | 'expiringWarranties'
-  | 'upcomingLicenseRenewals'
+  | 'expiringLicenses'
   | 'criticalStockItems'
   | 'overdueMaintenanceTasks'
+  | 'openMaintenanceRequests'
 
-export type DashboardItemStatus =
-  | 'Stokta'
-  | 'Zimmetli'
-  | 'Bakımda'
-  | 'Yaklaşıyor'
-  | 'Gecikmiş'
-  | 'Tamamlandı'
-
-export interface DashboardSummary {
-  key: DashboardSummaryKey
-  title: string
-  value: number
-}
-
-export interface DeviceMovement {
-  id: string
+export interface DashboardMovement {
+  assignmentId: string
+  assetId: string
   assetCode: string
-  deviceName: string
+  assetName: string
   description: string
+  status: StatusType
   occurredAt: string
-  status: DashboardItemStatus
 }
 
-export interface ExpiringWarranty {
-  id: string
+export interface DashboardWarranty {
+  assetId: string
   assetCode: string
-  deviceName: string
-  expiresAt: string
+  assetName: string
+  warrantyEndDate: string
   remainingDays: number
   status: 'Yaklaşıyor'
 }
 
-export interface CriticalStockItem {
-  id: string
-  productName: string
+export interface DashboardStock {
+  stockItemId: string
+  itemCode: string
+  itemName: string
   currentQuantity: number
   minimumQuantity: number
   unit: string
+  location: string
 }
 
-export interface MaintenanceTaskSummary {
-  id: string
+export interface DashboardMaintenance {
+  taskId: string
   assetCode: string
-  deviceName: string
-  taskName: string
-  dueDate: string
+  assetName: string
+  title: string
+  plannedDate: string
   status: 'Yaklaşıyor' | 'Gecikmiş'
+}
+
+export interface DashboardSummary {
+  totalAssets: number
+  inStockAssets: number
+  assignedAssets: number
+  maintenanceAssets: number
+  expiringWarranties: number
+  expiringLicenses: number
+  criticalStockItems: number
+  overdueMaintenanceTasks: number
+  openMaintenanceRequests: number
+  generatedAt: string
+  recentMovements: DashboardMovement[]
+  upcomingWarranties: DashboardWarranty[]
+  criticalStock: DashboardStock[]
+  upcomingMaintenance: DashboardMaintenance[]
 }

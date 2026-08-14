@@ -1,0 +1,59 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using TakipProgrami.Api.DTOs;
+using TakipProgrami.Api.Entities;
+using TakipProgrami.Api.Services;
+
+namespace TakipProgrami.Api.Controllers;
+
+[ApiController]
+[Authorize(Roles = "Admin,IT")]
+[Route("api/users")]
+public sealed class UsersController(UserService userService) : ControllerBase
+{
+    [HttpGet]
+    [ProducesResponseType<IReadOnlyList<UserDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<UserDto>>> GetAll(
+        CancellationToken cancellationToken) =>
+        Ok(await userService.GetUsersAsync(cancellationToken));
+
+    [HttpPost]
+    [ProducesResponseType<UserDto>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<UserDto>> Create(
+        UserCreateDto request,
+        CancellationToken cancellationToken)
+    {
+        var roleClaim = User.FindFirstValue(ClaimTypes.Role);
+        if (!Enum.TryParse<AppRole>(roleClaim, out var callerRole)) return Forbid();
+
+        var result = await userService.CreateAsync(request, callerRole, cancellationToken);
+        return result.Status switch
+        {
+            UserOperationStatus.Success => StatusCode(StatusCodes.Status201Created, result.User),
+            UserOperationStatus.Forbidden => ProblemResponse(
+                StatusCodes.Status403Forbidden,
+                "Yetkisiz işlem",
+                result.ErrorMessage!),
+            UserOperationStatus.Conflict => ProblemResponse(
+                StatusCodes.Status409Conflict,
+                "Kullanıcı oluşturulamadı",
+                result.ErrorMessage!),
+            _ => ProblemResponse(
+                StatusCodes.Status400BadRequest,
+                "Kullanıcı oluşturulamadı",
+                result.ErrorMessage!)
+        };
+    }
+
+    private ObjectResult ProblemResponse(int statusCode, string title, string detail) =>
+        StatusCode(statusCode, new ProblemDetails
+        {
+            Status = statusCode,
+            Title = title,
+            Detail = detail
+        });
+}

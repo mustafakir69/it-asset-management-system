@@ -7,13 +7,12 @@ import { useNavigate } from 'react-router-dom'
 import { ContentCard, ErrorState, LoadingState, PageHeader } from '../../components'
 import { assignmentService } from '../../services/assignmentService'
 import type { Asset } from '../../types/asset'
-import type { CreateAssignmentInput } from '../../types/assignment'
+import type { CreateAssignmentInput, Employee } from '../../types/assignment'
 import './AssignmentCreatePage.css'
 
 interface AssignmentFormValues {
   assetId: string
-  employeeName: string
-  department: string
+  employeeId: string
   assignedAt: Dayjs
   assignedBy: string
   notes?: string
@@ -24,6 +23,7 @@ function AssignmentCreatePage() {
   const { message } = AntdApp.useApp()
   const [form] = Form.useForm<AssignmentFormValues>()
   const [assignableAssets, setAssignableAssets] = useState<Asset[]>([])
+  const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -33,10 +33,18 @@ function AssignmentCreatePage() {
     setLoadError(null)
 
     try {
-      const assets = await assignmentService.getAssignableAssets()
+      const [assets, activeEmployees] = await Promise.all([
+        assignmentService.getAssignableAssets(),
+        assignmentService.getEmployees(),
+      ])
       setAssignableAssets(assets)
-    } catch {
-      setLoadError('Zimmete uygun cihazlar yüklenirken bir hata oluştu.')
+      setEmployees(activeEmployees)
+    } catch (error: unknown) {
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : 'Zimmet formu için gerekli veriler yüklenirken bir hata oluştu.',
+      )
     } finally {
       setIsLoading(false)
     }
@@ -51,9 +59,8 @@ function AssignmentCreatePage() {
 
     const input: CreateAssignmentInput = {
       assetId: values.assetId,
-      employeeName: values.employeeName.trim(),
-      department: values.department.trim(),
-      assignedAt: values.assignedAt.format('YYYY-MM-DD'),
+      employeeId: values.employeeId,
+      assignedAt: values.assignedAt.toISOString(),
       assignedBy: values.assignedBy.trim(),
       notes: values.notes?.trim() || null,
     }
@@ -73,6 +80,10 @@ function AssignmentCreatePage() {
   const assetOptions = assignableAssets.map((asset) => ({
     label: `${asset.assetCode} · ${asset.brand} ${asset.model}`,
     value: asset.id,
+  }))
+  const employeeOptions = employees.map((employee) => ({
+    label: `${employee.employeeNo} · ${employee.fullName} · ${employee.department}`,
+    value: employee.id,
   }))
 
   return (
@@ -124,20 +135,18 @@ function AssignmentCreatePage() {
               <Col xs={24} md={12}>
                 <Form.Item
                   label="Çalışan"
-                  name="employeeName"
-                  rules={[{ required: true, whitespace: true, message: 'Çalışan adını girin.' }]}
+                  name="employeeId"
+                  rules={[{ required: true, message: 'Zimmetlenecek çalışanı seçin.' }]}
                 >
-                  <Input placeholder="Çalışanın adı ve soyadı" />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} md={12}>
-                <Form.Item
-                  label="Departman"
-                  name="department"
-                  rules={[{ required: true, whitespace: true, message: 'Departmanı girin.' }]}
-                >
-                  <Input placeholder="Çalışanın departmanı" />
+                  <Select<string>
+                    disabled={employeeOptions.length === 0}
+                    optionFilterProp="label"
+                    options={employeeOptions}
+                    placeholder={
+                      employeeOptions.length > 0 ? 'Çalışan seçin' : 'Aktif çalışan bulunamadı'
+                    }
+                    showSearch
+                  />
                 </Form.Item>
               </Col>
 
@@ -183,7 +192,7 @@ function AssignmentCreatePage() {
                   İptal
                 </Button>
                 <Button
-                  disabled={assetOptions.length === 0}
+                  disabled={assetOptions.length === 0 || employeeOptions.length === 0}
                   htmlType="submit"
                   loading={isSubmitting}
                   type="primary"

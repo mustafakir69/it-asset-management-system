@@ -22,6 +22,117 @@ namespace TakipProgrami.Api.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("TakipProgrami.Api.Entities.AppUser", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<string>("EmployeeId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LastLoginAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AppUsers_Email");
+
+                    b.HasIndex("EmployeeId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AppUsers_EmployeeId")
+                        .HasFilter("[EmployeeId] IS NOT NULL");
+
+                    b.HasIndex("Username")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AppUsers_Username");
+
+                    b.ToTable("AppUsers", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "app-user-admin",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 14, 12, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Email = "admin.demo@example.test",
+                            IsActive = true,
+                            PasswordHash = "AQAAAAIAAYagAAAAEMWmnyeBUMAPR3BMaPAoDlzXnRlCCuCrvk4eCLxK4dXDv3HDaUF2agezRs6Hfp5wyg==",
+                            Role = "Admin",
+                            Username = "admin.demo"
+                        },
+                        new
+                        {
+                            Id = "app-user-it",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 14, 12, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Email = "it.demo@example.test",
+                            IsActive = true,
+                            PasswordHash = "AQAAAAIAAYagAAAAEMWmnyeBUMAPR3BMaPAoDlzXnRlCCuCrvk4eCLxK4dXDv3HDaUF2agezRs6Hfp5wyg==",
+                            Role = "IT",
+                            Username = "it.demo"
+                        },
+                        new
+                        {
+                            Id = "app-user-employee",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 14, 12, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Email = "employee.demo@example.test",
+                            EmployeeId = "employee-db-001",
+                            IsActive = true,
+                            PasswordHash = "AQAAAAIAAYagAAAAEMWmnyeBUMAPR3BMaPAoDlzXnRlCCuCrvk4eCLxK4dXDv3HDaUF2agezRs6Hfp5wyg==",
+                            Role = "Employee",
+                            Username = "employee.demo"
+                        },
+                        new
+                        {
+                            Id = "app-user-auditor",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 14, 12, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Email = "auditor.demo@example.test",
+                            IsActive = true,
+                            PasswordHash = "AQAAAAIAAYagAAAAEMWmnyeBUMAPR3BMaPAoDlzXnRlCCuCrvk4eCLxK4dXDv3HDaUF2agezRs6Hfp5wyg==",
+                            Role = "Auditor",
+                            Username = "auditor.demo"
+                        },
+                        new
+                        {
+                            Id = "app-user-inactive",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 14, 12, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Email = "inactive.demo@example.test",
+                            EmployeeId = "employee-db-009",
+                            IsActive = false,
+                            PasswordHash = "AQAAAAIAAYagAAAAEMWmnyeBUMAPR3BMaPAoDlzXnRlCCuCrvk4eCLxK4dXDv3HDaUF2agezRs6Hfp5wyg==",
+                            Role = "Employee",
+                            Username = "inactive.demo"
+                        });
+                });
+
             modelBuilder.Entity("TakipProgrami.Api.Entities.Asset", b =>
                 {
                     b.Property<string>("Id")
@@ -211,6 +322,355 @@ namespace TakipProgrami.Api.Data.Migrations
                             SerialNumber = "DB-CNN-MF6-1010",
                             Status = "Stokta",
                             WarrantyEndDate = new DateOnly(2028, 5, 6)
+                        });
+                });
+
+            modelBuilder.Entity("TakipProgrami.Api.Entities.Assignment", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("AssetId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("AssignedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("AssignedBy")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("EmployeeId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("ReturnNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTimeOffset?>("ReturnedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ReturnedBy")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssetId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Assignments_AssetId_Active")
+                        .HasFilter("[ReturnedAt] IS NULL");
+
+                    b.HasIndex("EmployeeId")
+                        .HasDatabaseName("IX_Assignments_EmployeeId");
+
+                    b.ToTable("Assignments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Assignments_ReturnedAt_NotBeforeAssignedAt", "[ReturnedAt] IS NULL OR [ReturnedAt] >= [AssignedAt]");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "assignment-db-001",
+                            AssetId = "asset-db-001",
+                            AssignedAt = new DateTimeOffset(new DateTime(2026, 3, 2, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            AssignedBy = "BT Operasyon",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            EmployeeId = "employee-db-001",
+                            Notes = "Standart çalışma cihazı zimmeti."
+                        },
+                        new
+                        {
+                            Id = "assignment-db-002",
+                            AssetId = "asset-db-008",
+                            AssignedAt = new DateTimeOffset(new DateTime(2026, 4, 6, 10, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            AssignedBy = "BT Operasyon",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            EmployeeId = "employee-db-002",
+                            Notes = "Kurumsal telefon zimmeti."
+                        },
+                        new
+                        {
+                            Id = "assignment-db-003",
+                            AssetId = "asset-db-002",
+                            AssignedAt = new DateTimeOffset(new DateTime(2026, 2, 10, 9, 30, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            AssignedBy = "BT Operasyon",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            EmployeeId = "employee-db-003",
+                            Notes = "Geçici proje cihazı.",
+                            ReturnNotes = "Eksiksiz teslim alındı.",
+                            ReturnedAt = new DateTimeOffset(new DateTime(2026, 5, 15, 16, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            ReturnedBy = "BT Destek"
+                        },
+                        new
+                        {
+                            Id = "assignment-db-004",
+                            AssetId = "asset-db-004",
+                            AssignedAt = new DateTimeOffset(new DateTime(2026, 3, 20, 8, 45, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            AssignedBy = "BT Operasyon",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            EmployeeId = "employee-db-004",
+                            Notes = "Operasyon masası kullanımı.",
+                            ReturnNotes = "Cihaz depoya alındı.",
+                            ReturnedAt = new DateTimeOffset(new DateTime(2026, 6, 30, 17, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            ReturnedBy = "BT Destek"
+                        },
+                        new
+                        {
+                            Id = "assignment-db-005",
+                            AssetId = "asset-db-006",
+                            AssignedAt = new DateTimeOffset(new DateTime(2026, 4, 12, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            AssignedBy = "BT Operasyon",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            EmployeeId = "employee-db-005",
+                            Notes = "Ek çalışma ekranı.",
+                            ReturnNotes = "Fiziksel kontrol tamamlandı.",
+                            ReturnedAt = new DateTimeOffset(new DateTime(2026, 7, 18, 15, 30, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            ReturnedBy = "BT Destek"
+                        },
+                        new
+                        {
+                            Id = "assignment-db-006",
+                            AssetId = "asset-db-010",
+                            AssignedAt = new DateTimeOffset(new DateTime(2026, 5, 8, 11, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            AssignedBy = "BT Operasyon",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            EmployeeId = "employee-db-006",
+                            Notes = "Birim yazıcısı kullanımı.",
+                            ReturnNotes = "Çalışır durumda teslim alındı.",
+                            ReturnedAt = new DateTimeOffset(new DateTime(2026, 7, 22, 14, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            ReturnedBy = "BT Destek"
+                        },
+                        new
+                        {
+                            Id = "assignment-db-007",
+                            AssetId = "asset-db-003",
+                            AssignedAt = new DateTimeOffset(new DateTime(2025, 11, 3, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            AssignedBy = "BT Operasyon",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            EmployeeId = "employee-db-007",
+                            Notes = "Dönemsel kullanım.",
+                            ReturnNotes = "Bakım kontrolü için teslim alındı.",
+                            ReturnedAt = new DateTimeOffset(new DateTime(2026, 1, 9, 16, 30, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            ReturnedBy = "BT Destek"
+                        },
+                        new
+                        {
+                            Id = "assignment-db-008",
+                            AssetId = "asset-db-007",
+                            AssignedAt = new DateTimeOffset(new DateTime(2026, 1, 12, 10, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            AssignedBy = "BT Operasyon",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 9, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            EmployeeId = "employee-db-008",
+                            Notes = "Geçici monitör kullanımı.",
+                            ReturnNotes = "Teslim kaydı tamamlandı.",
+                            ReturnedAt = new DateTimeOffset(new DateTime(2026, 2, 20, 15, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            ReturnedBy = "BT Destek"
+                        });
+                });
+
+            modelBuilder.Entity("TakipProgrami.Api.Entities.AuditLog", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("EntityName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NewValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OldValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_AuditLogs_CreatedAt");
+
+                    b.HasIndex("Username")
+                        .HasDatabaseName("IX_AuditLogs_Username");
+
+                    b.HasIndex("EntityName", "Action")
+                        .HasDatabaseName("IX_AuditLogs_EntityName_Action");
+
+                    b.ToTable("AuditLogs", (string)null);
+                });
+
+            modelBuilder.Entity("TakipProgrami.Api.Entities.Employee", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Department")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<string>("EmployeeNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Employees_Email");
+
+                    b.HasIndex("EmployeeNo")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Employees_EmployeeNo");
+
+                    b.ToTable("Employees", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "employee-db-001",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 8, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Department = "BT",
+                            Email = "demo.kullanici1@example.test",
+                            EmployeeNo = "EMP-001",
+                            FullName = "Demo Kullanıcı 1",
+                            IsActive = true
+                        },
+                        new
+                        {
+                            Id = "employee-db-002",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 8, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Department = "Finans",
+                            Email = "demo.kullanici2@example.test",
+                            EmployeeNo = "EMP-002",
+                            FullName = "Demo Kullanıcı 2",
+                            IsActive = true
+                        },
+                        new
+                        {
+                            Id = "employee-db-003",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 8, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Department = "İnsan Kaynakları",
+                            Email = "demo.kullanici3@example.test",
+                            EmployeeNo = "EMP-003",
+                            FullName = "Demo Kullanıcı 3",
+                            IsActive = true
+                        },
+                        new
+                        {
+                            Id = "employee-db-004",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 8, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Department = "Operasyon",
+                            Email = "demo.kullanici4@example.test",
+                            EmployeeNo = "EMP-004",
+                            FullName = "Demo Kullanıcı 4",
+                            IsActive = true
+                        },
+                        new
+                        {
+                            Id = "employee-db-005",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 8, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Department = "Satış",
+                            Email = "demo.kullanici5@example.test",
+                            EmployeeNo = "EMP-005",
+                            FullName = "Demo Kullanıcı 5",
+                            IsActive = true
+                        },
+                        new
+                        {
+                            Id = "employee-db-006",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 8, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Department = "Muhasebe",
+                            Email = "demo.kullanici6@example.test",
+                            EmployeeNo = "EMP-006",
+                            FullName = "Demo Kullanıcı 6",
+                            IsActive = true
+                        },
+                        new
+                        {
+                            Id = "employee-db-007",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 8, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Department = "Pazarlama",
+                            Email = "demo.kullanici7@example.test",
+                            EmployeeNo = "EMP-007",
+                            FullName = "Demo Kullanıcı 7",
+                            IsActive = true
+                        },
+                        new
+                        {
+                            Id = "employee-db-008",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 8, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Department = "Lojistik",
+                            Email = "demo.kullanici8@example.test",
+                            EmployeeNo = "EMP-008",
+                            FullName = "Demo Kullanıcı 8",
+                            IsActive = true
+                        },
+                        new
+                        {
+                            Id = "employee-db-009",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 1, 8, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Department = "Operasyon",
+                            Email = "demo.kullanici9@example.test",
+                            EmployeeNo = "EMP-009",
+                            FullName = "Demo Kullanıcı 9",
+                            IsActive = false
                         });
                 });
 
@@ -416,6 +876,54 @@ namespace TakipProgrami.Api.Data.Migrations
                             UsedSeats = 37,
                             Vendor = "Microsoft"
                         });
+                });
+
+            modelBuilder.Entity("TakipProgrami.Api.Entities.MaintenanceNotification", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("DeliveryStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("MaintenanceTaskId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("NotificationType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Recipient")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<DateTimeOffset>("ScheduledAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScheduledAt")
+                        .HasDatabaseName("IX_MaintenanceNotifications_ScheduledAt");
+
+                    b.HasIndex("MaintenanceTaskId", "NotificationType")
+                        .IsUnique()
+                        .HasDatabaseName("UX_MaintenanceNotifications_Task_Type");
+
+                    b.ToTable("MaintenanceNotifications", (string)null);
                 });
 
             modelBuilder.Entity("TakipProgrami.Api.Entities.MaintenancePlan", b =>
@@ -918,6 +1426,56 @@ namespace TakipProgrami.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TakipProgrami.Api.Entities.StockAlert", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("QuantityAtTrigger")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Recipient")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("StockItemId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("TriggeredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StockItemId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_StockAlerts_StockItemId_Active")
+                        .HasFilter("[ResolvedAt] IS NULL");
+
+                    b.HasIndex("TriggeredAt")
+                        .HasDatabaseName("IX_StockAlerts_TriggeredAt");
+
+                    b.ToTable("StockAlerts", (string)null);
+                });
+
             modelBuilder.Entity("TakipProgrami.Api.Entities.StockItem", b =>
                 {
                     b.Property<string>("Id")
@@ -1255,6 +1813,46 @@ namespace TakipProgrami.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TakipProgrami.Api.Entities.AppUser", b =>
+                {
+                    b.HasOne("TakipProgrami.Api.Entities.Employee", "Employee")
+                        .WithOne("AppUser")
+                        .HasForeignKey("TakipProgrami.Api.Entities.AppUser", "EmployeeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("TakipProgrami.Api.Entities.Assignment", b =>
+                {
+                    b.HasOne("TakipProgrami.Api.Entities.Asset", "Asset")
+                        .WithMany("Assignments")
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TakipProgrami.Api.Entities.Employee", "Employee")
+                        .WithMany("Assignments")
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Asset");
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("TakipProgrami.Api.Entities.MaintenanceNotification", b =>
+                {
+                    b.HasOne("TakipProgrami.Api.Entities.MaintenanceTask", "MaintenanceTask")
+                        .WithMany("Notifications")
+                        .HasForeignKey("MaintenanceTaskId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("MaintenanceTask");
+                });
+
             modelBuilder.Entity("TakipProgrami.Api.Entities.MaintenancePlan", b =>
                 {
                     b.HasOne("TakipProgrami.Api.Entities.Asset", "Asset")
@@ -1296,6 +1894,17 @@ namespace TakipProgrami.Api.Data.Migrations
                     b.Navigation("MaintenancePlan");
                 });
 
+            modelBuilder.Entity("TakipProgrami.Api.Entities.StockAlert", b =>
+                {
+                    b.HasOne("TakipProgrami.Api.Entities.StockItem", "StockItem")
+                        .WithMany("Alerts")
+                        .HasForeignKey("StockItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("StockItem");
+                });
+
             modelBuilder.Entity("TakipProgrami.Api.Entities.StockTransaction", b =>
                 {
                     b.HasOne("TakipProgrami.Api.Entities.StockItem", "StockItem")
@@ -1309,6 +1918,8 @@ namespace TakipProgrami.Api.Data.Migrations
 
             modelBuilder.Entity("TakipProgrami.Api.Entities.Asset", b =>
                 {
+                    b.Navigation("Assignments");
+
                     b.Navigation("MaintenancePlans");
 
                     b.Navigation("MaintenanceRequests");
@@ -1316,13 +1927,27 @@ namespace TakipProgrami.Api.Data.Migrations
                     b.Navigation("MaintenanceTasks");
                 });
 
+            modelBuilder.Entity("TakipProgrami.Api.Entities.Employee", b =>
+                {
+                    b.Navigation("AppUser");
+
+                    b.Navigation("Assignments");
+                });
+
             modelBuilder.Entity("TakipProgrami.Api.Entities.MaintenancePlan", b =>
                 {
                     b.Navigation("Tasks");
                 });
 
+            modelBuilder.Entity("TakipProgrami.Api.Entities.MaintenanceTask", b =>
+                {
+                    b.Navigation("Notifications");
+                });
+
             modelBuilder.Entity("TakipProgrami.Api.Entities.StockItem", b =>
                 {
+                    b.Navigation("Alerts");
+
                     b.Navigation("Transactions");
                 });
 #pragma warning restore 612, 618

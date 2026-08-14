@@ -1,12 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TakipProgrami.Api.Data;
 using TakipProgrami.Api.DTOs;
 using TakipProgrami.Api.Entities;
+using TakipProgrami.Api.Helpers;
 
 namespace TakipProgrami.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/maintenance/tasks")]
 public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) : ControllerBase
 {
@@ -28,6 +31,7 @@ public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) :
     }
 
     [HttpPut("{id}/complete")]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     public async Task<ActionResult<MaintenanceTaskDto>> Complete(
         string id,
         MaintenanceTaskCompleteDto request,
@@ -48,7 +52,9 @@ public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) :
 
         if (task.MaintenancePlan.IsActive)
         {
-            var nextDate = task.PlannedDate.AddDays(task.MaintenancePlan.FrequencyDays);
+            var nextDate = MaintenanceRules.GetNextPlannedDate(
+                task.PlannedDate,
+                task.MaintenancePlan.FrequencyDays);
             var exists = await dbContext.MaintenanceTasks.AnyAsync(
                 item => item.MaintenancePlanId == task.MaintenancePlanId && item.PlannedDate == nextDate,
                 cancellationToken);
@@ -72,6 +78,7 @@ public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) :
     }
 
     [HttpPut("{id}/cancel")]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     public async Task<ActionResult<MaintenanceTaskDto>> Cancel(
         string id,
         MaintenanceTaskCancelDto request,
@@ -89,6 +96,7 @@ public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) :
     }
 
     [HttpPut("{id}/reschedule")]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     public async Task<ActionResult<MaintenanceTaskDto>> Reschedule(
         string id,
         MaintenanceTaskRescheduleDto request,

@@ -37,8 +37,10 @@ function AssignmentDetailPage() {
       }
 
       setAssignment(assignmentData)
-    } catch {
-      setLoadError('Zimmet bilgileri yüklenirken bir hata oluştu.')
+    } catch (error: unknown) {
+      setLoadError(
+        error instanceof Error ? error.message : 'Zimmet bilgileri yüklenirken bir hata oluştu.',
+      )
     } finally {
       setIsLoading(false)
     }

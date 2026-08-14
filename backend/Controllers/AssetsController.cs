@@ -1,12 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TakipProgrami.Api.Data;
 using TakipProgrami.Api.DTOs;
+using TakipProgrami.Api.Helpers;
 
 namespace TakipProgrami.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/assets")]
 public sealed class AssetsController(ApplicationDbContext dbContext) : ControllerBase
 {
@@ -46,6 +49,7 @@ public sealed class AssetsController(ApplicationDbContext dbContext) : Controlle
     }
 
     [HttpPost]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     [ProducesResponseType<AssetDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -98,6 +102,7 @@ public sealed class AssetsController(ApplicationDbContext dbContext) : Controlle
     }
 
     [HttpPut("{id}")]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     [ProducesResponseType<AssetDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

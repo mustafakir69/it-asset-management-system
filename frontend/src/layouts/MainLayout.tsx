@@ -10,6 +10,7 @@ import {
   FileProtectOutlined,
   HistoryOutlined,
   LaptopOutlined,
+  LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   PlusOutlined,
@@ -26,6 +27,8 @@ import {
 import { Button, Layout, Menu, Typography } from 'antd'
 import type { MenuProps } from 'antd'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/useAuth'
+import type { UserRole } from '../types/auth'
 import './MainLayout.css'
 
 const { Header, Content, Sider } = Layout
@@ -100,9 +103,16 @@ const menuItems: MenuProps['items'] = [
     ],
   },
   {
-    key: '/reports',
+    key: 'reports-menu',
     icon: <BarChartOutlined />,
     label: 'Raporlar',
+    children: [
+      { key: '/reports', icon: <BarChartOutlined />, label: 'Rapor Merkezi' },
+      { key: '/reports/inventory', icon: <LaptopOutlined />, label: 'Envanter Raporu' },
+      { key: '/reports/assignments', icon: <SolutionOutlined />, label: 'Zimmet Raporu' },
+      { key: '/reports/stock', icon: <DatabaseOutlined />, label: 'Stok Raporu' },
+      { key: '/reports/maintenance', icon: <ToolOutlined />, label: 'Bakım Raporu' },
+    ],
   },
   {
     key: 'admin-menu',
@@ -117,6 +127,71 @@ const menuItems: MenuProps['items'] = [
     ],
   },
 ]
+
+const hiddenMenuKeysByRole: Record<UserRole, ReadonlySet<string>> = {
+  Admin: new Set(['/my-assignments', '/my-licenses', '/maintenance/my-requests']),
+  IT: new Set([
+    '/my-assignments',
+    '/my-licenses',
+    '/maintenance/my-requests',
+    '/admin/categories',
+    '/admin/locations',
+    '/admin/suppliers',
+    '/admin/audit-logs',
+  ]),
+  Employee: new Set([
+    'inventory-menu',
+    '/assignments',
+    '/assignments/new',
+    '/assignments/returns',
+    '/assignments/history',
+    'stock-menu',
+    'warranties-menu',
+    '/licenses',
+    '/licenses/expiring',
+    '/maintenance',
+    '/maintenance/plans',
+    '/maintenance/tasks',
+    '/maintenance/requests',
+    '/maintenance/history',
+    'reports-menu',
+    'admin-menu',
+  ]),
+  Auditor: new Set([
+    '/assets/new',
+    '/assignments/new',
+    '/assignments/returns',
+    '/my-assignments',
+    '/my-licenses',
+    '/maintenance/my-requests',
+    '/admin/users',
+    '/admin/categories',
+    '/admin/locations',
+    '/admin/suppliers',
+  ]),
+}
+
+const filterMenuItemsByRole = (
+  items: MenuProps['items'],
+  role: UserRole,
+): MenuProps['items'] => {
+  const hiddenKeys = hiddenMenuKeysByRole[role]
+
+  return (items ?? []).reduce<NonNullable<MenuProps['items']>>((visibleItems, item) => {
+    if (!item || hiddenKeys.has(String(item.key))) return visibleItems
+
+    if ('children' in item && item.children) {
+      visibleItems.push({
+        ...item,
+        children: filterMenuItemsByRole(item.children, role) ?? [],
+      } as typeof item)
+    } else {
+      visibleItems.push(item)
+    }
+
+    return visibleItems
+  }, [])
+}
 
 const getSelectedMenuKey = (pathname: string) => {
   const exactMenuPaths = [
@@ -139,6 +214,10 @@ const getSelectedMenuKey = (pathname: string) => {
     '/maintenance/history',
     '/maintenance/my-requests',
     '/reports',
+    '/reports/inventory',
+    '/reports/assignments',
+    '/reports/stock',
+    '/reports/maintenance',
     '/admin/users',
     '/admin/categories',
     '/admin/locations',
@@ -157,6 +236,8 @@ const getSelectedMenuKey = (pathname: string) => {
   if (pathname.startsWith('/maintenance/plans/')) return '/maintenance/plans'
   if (pathname.startsWith('/maintenance/tasks/')) return '/maintenance/tasks'
   if (pathname.startsWith('/maintenance/requests/')) return '/maintenance/requests'
+  if (pathname.startsWith('/reports/')) return pathname
+  if (pathname.startsWith('/admin/users/')) return '/admin/users'
 
   return pathname
 }
@@ -168,6 +249,7 @@ const getOpenMenuKeys = (pathname: string) => {
   if (pathname.startsWith('/warranties')) return ['warranties-menu']
   if (pathname.startsWith('/licenses') || pathname === '/my-licenses') return ['licenses-menu']
   if (pathname.startsWith('/maintenance')) return ['maintenance-menu']
+  if (pathname.startsWith('/reports')) return ['reports-menu']
   if (pathname.startsWith('/admin')) return ['admin-menu']
 
   return []
@@ -175,13 +257,20 @@ const getOpenMenuKeys = (pathname: string) => {
 
 function MainLayout() {
   const [collapsed, setCollapsed] = useState(false)
+  const { logout, user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const visibleMenuItems = user ? filterMenuItemsByRole(menuItems, user.role) : []
 
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
     if (key.startsWith('/')) {
       void navigate(key)
     }
+  }
+
+  const handleLogout = () => {
+    logout()
+    void navigate('/login', { replace: true })
   }
 
   return (
@@ -200,7 +289,7 @@ function MainLayout() {
         </div>
         <Menu
           defaultOpenKeys={getOpenMenuKeys(location.pathname)}
-          items={menuItems}
+          items={visibleMenuItems}
           mode="inline"
           onClick={handleMenuClick}
           selectedKeys={[getSelectedMenuKey(location.pathname)]}
@@ -216,7 +305,20 @@ function MainLayout() {
             onClick={() => setCollapsed((current) => !current)}
             type="text"
           />
-          <Typography.Text strong>Donanım ve Lisans Takip Sistemi</Typography.Text>
+          <Typography.Text className="header-title" strong>
+            Donanım ve Lisans Takip Sistemi
+          </Typography.Text>
+          {user && (
+            <div className="header-user">
+              <div className="header-user-details">
+                <Typography.Text strong>{user.username}</Typography.Text>
+                <Typography.Text type="secondary">{user.roleDisplayName}</Typography.Text>
+              </div>
+              <Button icon={<LogoutOutlined />} onClick={handleLogout}>
+                Çıkış Yap
+              </Button>
+            </div>
+          )}
         </Header>
 
         <Content className="main-content">

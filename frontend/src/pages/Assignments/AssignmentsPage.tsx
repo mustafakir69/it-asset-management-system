@@ -10,6 +10,7 @@ import type { TableColumnsType, TablePaginationConfig } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ContentCard, EmptyState, ErrorState, LoadingState, PageHeader } from '../../components'
+import { useAuth } from '../../contexts/useAuth'
 import { assignmentService } from '../../services/assignmentService'
 import type { Assignment, ReturnAssignmentInput } from '../../types/assignment'
 import { formatDate } from '../../utils'
@@ -33,6 +34,8 @@ const initialFilters: AssignmentFilters = {
 function AssignmentsPage() {
   const navigate = useNavigate()
   const { message } = AntdApp.useApp()
+  const { role } = useAuth()
+  const canManageAssignments = role === 'Admin' || role === 'IT'
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -46,10 +49,12 @@ function AssignmentsPage() {
     setLoadError(null)
 
     try {
-      const activeAssignments = await assignmentService.getActiveAssignments()
+      const activeAssignments = await assignmentService.getAssignments()
       setAssignments(activeAssignments)
-    } catch {
-      setLoadError('Aktif zimmetler yüklenirken bir hata oluştu.')
+    } catch (error: unknown) {
+      setLoadError(
+        error instanceof Error ? error.message : 'Aktif zimmetler yüklenirken bir hata oluştu.',
+      )
     } finally {
       setIsLoading(false)
     }
@@ -185,14 +190,16 @@ function AssignmentsPage() {
           >
             Görüntüle
           </Button>
-          <Button
-            icon={<RollbackOutlined />}
-            onClick={() => setSelectedAssignment(assignment)}
-            size="small"
-            type="link"
-          >
-            İade Al
-          </Button>
+          {canManageAssignments && (
+            <Button
+              icon={<RollbackOutlined />}
+              onClick={() => setSelectedAssignment(assignment)}
+              size="small"
+              type="link"
+            >
+              İade Al
+            </Button>
+          )}
         </Space>
       ),
     },
@@ -203,7 +210,7 @@ function AssignmentsPage() {
       <PageHeader
         title="Aktif Zimmetler"
         description="Çalışanlara teslim edilmiş ve henüz iade alınmamış cihazları görüntüleyin."
-        actions={
+        actions={canManageAssignments ? (
           <Button
             icon={<PlusOutlined />}
             onClick={() => void navigate('/assignments/new')}
@@ -211,7 +218,7 @@ function AssignmentsPage() {
           >
             Yeni Zimmet
           </Button>
-        }
+        ) : undefined}
       />
 
       <ContentCard>

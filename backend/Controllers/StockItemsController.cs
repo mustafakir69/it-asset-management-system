@@ -1,14 +1,17 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using TakipProgrami.Api.Data;
 using TakipProgrami.Api.DTOs;
 using TakipProgrami.Api.Entities;
+using TakipProgrami.Api.Helpers;
 using TakipProgrami.Api.Services;
 
 namespace TakipProgrami.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/stock-items")]
 public sealed class StockItemsController(
     ApplicationDbContext dbContext,
@@ -54,6 +57,7 @@ public sealed class StockItemsController(
     }
 
     [HttpPost]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     [ProducesResponseType<StockItemDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -101,6 +105,7 @@ public sealed class StockItemsController(
     }
 
     [HttpPost("{id}/transactions")]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     [ProducesResponseType<StockTransactionDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

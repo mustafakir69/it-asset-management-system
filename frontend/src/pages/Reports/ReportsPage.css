@@ -1,0 +1,5 @@
+.report-center-card { display: flex; gap: 16px; align-items: flex-start; }
+.report-center-icon { color: #1677ff; font-size: 28px; line-height: 1; padding-top: 4px; }
+.report-center-card .ant-typography { margin-top: 0; }
+.report-page-content { width: 100%; }
+.report-summary-card .ant-statistic-title { min-height: 44px; }

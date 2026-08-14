@@ -1,0 +1,21 @@
+import { ClearOutlined, DownloadOutlined } from '@ant-design/icons'
+import { App, Button, Col, Row, Select, Space, Table, Tag, Typography } from 'antd'
+import type { TableColumnsType } from 'antd'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ContentCard, EmptyState, ErrorState, LoadingState, PageHeader } from '../../components'
+import { reportService } from '../../services/reportService'
+import type { StockReportFilters, StockReportItem } from '../../types/report'
+import './ReportsPage.css'
+
+function StockReportPage() {
+  const { message } = App.useApp(); const [records, setRecords] = useState<StockReportItem[]>([]); const [filters, setFilters] = useState<StockReportFilters>({}); const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null)
+  const load = useCallback(async () => { setLoading(true); setError(null); try { setRecords(await reportService.getStock(filters)) } catch (reason: unknown) { setError(reason instanceof Error ? reason.message : 'Stok raporu alınamadı.') } finally { setLoading(false) } }, [filters])
+  useEffect(() => { void load() }, [load])
+  const options = useMemo(() => ({ categories: [...new Set(records.map((item) => item.category))].sort().map((value) => ({ value, label: value })), locations: [...new Set(records.map((item) => item.location))].sort().map((value) => ({ value, label: value })) }), [records])
+  const columns: TableColumnsType<StockReportItem> = [
+    { title: 'Ürün Kodu', dataIndex: 'itemCode', width: 125, sorter: (a, b) => a.itemCode.localeCompare(b.itemCode, 'tr-TR'), render: (value: string) => <Typography.Text strong>{value}</Typography.Text> }, { title: 'Ürün', dataIndex: 'itemName', width: 180 }, { title: 'Kategori', dataIndex: 'category', width: 140 }, { title: 'Marka / Model', dataIndex: 'brandModel', width: 170 }, { title: 'Mevcut', dataIndex: 'currentQuantity', align: 'right', width: 90, sorter: (a, b) => a.currentQuantity - b.currentQuantity }, { title: 'Minimum', dataIndex: 'minimumQuantity', align: 'right', width: 90 }, { title: 'Birim', dataIndex: 'unit', width: 80 }, { title: 'Lokasyon', dataIndex: 'location', width: 145 }, { title: 'Durum', dataIndex: 'isCritical', width: 105, render: (value: boolean) => <Tag color={value ? 'red' : 'green'}>{value ? 'Kritik' : 'Normal'}</Tag> },
+  ]
+  const exportCsv = async () => { try { await reportService.downloadStockCsv(filters); void message.success('Stok raporu indirildi.') } catch (reason: unknown) { void message.error(reason instanceof Error ? reason.message : 'CSV indirilemedi.') } }
+  return <section><PageHeader title="Stok Raporu" description="Stok seviyelerini ve kritik ürünleri gerçek verilerle raporlayın." actions={<Button icon={<DownloadOutlined />} onClick={() => void exportCsv()} type="primary">CSV İndir</Button>} /><ContentCard>{error ? <ErrorState message={error} onRetry={() => void load()} /> : loading ? <LoadingState message="Stok raporu yükleniyor..." /> : <Space className="report-page-content" direction="vertical" size="large"><Row gutter={[12, 12]}><Col xs={24} md={7}><Select allowClear options={options.categories} placeholder="Kategori" value={filters.category} onChange={(category) => setFilters((current) => ({ ...current, category }))} /></Col><Col xs={24} md={7}><Select allowClear options={options.locations} placeholder="Lokasyon" value={filters.location} onChange={(location) => setFilters((current) => ({ ...current, location }))} /></Col><Col xs={24} md={6}><Select allowClear options={[{ value: false, label: 'Normal' }, { value: true, label: 'Kritik' }]} placeholder="Stok Durumu" value={filters.critical} onChange={(critical) => setFilters((current) => ({ ...current, critical }))} /></Col><Col xs={24} md={4}><Button block icon={<ClearOutlined />} onClick={() => setFilters({})}>Temizle</Button></Col></Row><Typography.Text type="secondary">{records.length} kayıt bulundu</Typography.Text><Table columns={columns} dataSource={records} locale={{ emptyText: <EmptyState description="Filtrelere uygun stok kaydı bulunamadı." /> }} pagination={{ defaultPageSize: 10, pageSizeOptions: ['10', '20', '50'], showSizeChanger: true }} rowKey="itemCode" scroll={{ x: 1125 }} size="small" tableLayout="fixed" /></Space>}</ContentCard></section>
+}
+export default StockReportPage

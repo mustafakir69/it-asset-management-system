@@ -1,18 +1,50 @@
+using System.Security.Claims;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TakipProgrami.Api.Entities;
 
 namespace TakipProgrami.Api.Data;
 
-public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+public sealed class ApplicationDbContext(
+    DbContextOptions<ApplicationDbContext> options,
+    IHttpContextAccessor httpContextAccessor)
     : DbContext(options)
 {
     public DbSet<Asset> Assets => Set<Asset>();
+    public DbSet<Employee> Employees => Set<Employee>();
+    public DbSet<Assignment> Assignments => Set<Assignment>();
+    public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<StockItem> StockItems => Set<StockItem>();
     public DbSet<StockTransaction> StockTransactions => Set<StockTransaction>();
     public DbSet<License> Licenses => Set<License>();
     public DbSet<MaintenancePlan> MaintenancePlans => Set<MaintenancePlan>();
     public DbSet<MaintenanceTask> MaintenanceTasks => Set<MaintenanceTask>();
     public DbSet<MaintenanceRequest> MaintenanceRequests => Set<MaintenanceRequest>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<StockAlert> StockAlerts => Set<StockAlert>();
+    public DbSet<MaintenanceNotification> MaintenanceNotifications => Set<MaintenanceNotification>();
+
+    private static readonly JsonSerializerOptions AuditJsonOptions = new()
+    {
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    private static readonly HashSet<string> SensitivePropertyNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Password",
+        "PasswordHash",
+        "JwtKey",
+        "Token"
+    };
+
+    public override Task<int> SaveChangesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        AddAuditEntries();
+        return base.SaveChangesAsync(cancellationToken);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -174,10 +206,326 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
                 WarrantyEndDate = new DateOnly(2028, 5, 6)
             });
 
+        ConfigureEmployeesAndAssignments(modelBuilder);
+        ConfigureAppUsers(modelBuilder);
         ConfigureStockItems(modelBuilder);
         ConfigureStockTransactions(modelBuilder);
         ConfigureLicenses(modelBuilder);
         ConfigureMaintenance(modelBuilder);
+        ConfigureAuditLogs(modelBuilder);
+        ConfigureNotifications(modelBuilder);
+    }
+
+    private static void ConfigureNotifications(ModelBuilder modelBuilder)
+    {
+        var stockAlert = modelBuilder.Entity<StockAlert>();
+        stockAlert.ToTable("StockAlerts");
+        stockAlert.HasKey(item => item.Id);
+        stockAlert.Property(item => item.Id).HasMaxLength(64);
+        stockAlert.Property(item => item.StockItemId).HasMaxLength(64).IsRequired();
+        stockAlert.Property(item => item.TriggeredAt).HasColumnType("datetimeoffset");
+        stockAlert.Property(item => item.Recipient).HasMaxLength(254).IsRequired();
+        stockAlert.Property(item => item.SentAt).HasColumnType("datetimeoffset");
+        stockAlert.Property(item => item.Status).HasConversion<string>().HasMaxLength(30).IsRequired();
+        stockAlert.Property(item => item.ErrorMessage).HasMaxLength(2000);
+        stockAlert.Property(item => item.ResolvedAt).HasColumnType("datetimeoffset");
+        stockAlert.HasIndex(item => item.StockItemId)
+            .IsUnique()
+            .HasFilter("[ResolvedAt] IS NULL")
+            .HasDatabaseName("UX_StockAlerts_StockItemId_Active");
+        stockAlert.HasIndex(item => item.TriggeredAt)
+            .HasDatabaseName("IX_StockAlerts_TriggeredAt");
+        stockAlert.HasOne(item => item.StockItem)
+            .WithMany(item => item.Alerts)
+            .HasForeignKey(item => item.StockItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        var maintenanceNotification = modelBuilder.Entity<MaintenanceNotification>();
+        maintenanceNotification.ToTable("MaintenanceNotifications");
+        maintenanceNotification.HasKey(item => item.Id);
+        maintenanceNotification.Property(item => item.Id).HasMaxLength(64);
+        maintenanceNotification.Property(item => item.MaintenanceTaskId).HasMaxLength(64).IsRequired();
+        maintenanceNotification.Property(item => item.NotificationType)
+            .HasConversion<string>().HasMaxLength(30).IsRequired();
+        maintenanceNotification.Property(item => item.Recipient).HasMaxLength(254).IsRequired();
+        maintenanceNotification.Property(item => item.ScheduledAt).HasColumnType("datetimeoffset");
+        maintenanceNotification.Property(item => item.SentAt).HasColumnType("datetimeoffset");
+        maintenanceNotification.Property(item => item.DeliveryStatus)
+            .HasConversion<string>().HasMaxLength(30).IsRequired();
+        maintenanceNotification.Property(item => item.ErrorMessage).HasMaxLength(2000);
+        maintenanceNotification.HasIndex(item => new { item.MaintenanceTaskId, item.NotificationType })
+            .IsUnique()
+            .HasDatabaseName("UX_MaintenanceNotifications_Task_Type");
+        maintenanceNotification.HasIndex(item => item.ScheduledAt)
+            .HasDatabaseName("IX_MaintenanceNotifications_ScheduledAt");
+        maintenanceNotification.HasOne(item => item.MaintenanceTask)
+            .WithMany(item => item.Notifications)
+            .HasForeignKey(item => item.MaintenanceTaskId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureAuditLogs(ModelBuilder modelBuilder)
+    {
+        var auditLog = modelBuilder.Entity<AuditLog>();
+        auditLog.ToTable("AuditLogs");
+        auditLog.HasKey(item => item.Id);
+        auditLog.Property(item => item.Id).HasMaxLength(64);
+        auditLog.Property(item => item.UserId).HasMaxLength(64).IsRequired();
+        auditLog.Property(item => item.Username).HasMaxLength(100).IsRequired();
+        auditLog.Property(item => item.EntityName).HasMaxLength(100).IsRequired();
+        auditLog.Property(item => item.EntityId).HasMaxLength(64).IsRequired();
+        auditLog.Property(item => item.Action).HasMaxLength(100).IsRequired();
+        auditLog.Property(item => item.OldValue).HasColumnType("nvarchar(max)");
+        auditLog.Property(item => item.NewValue).HasColumnType("nvarchar(max)");
+        auditLog.Property(item => item.CreatedAt).HasColumnType("datetimeoffset");
+        auditLog.HasIndex(item => item.CreatedAt)
+            .HasDatabaseName("IX_AuditLogs_CreatedAt");
+        auditLog.HasIndex(item => new { item.EntityName, item.Action })
+            .HasDatabaseName("IX_AuditLogs_EntityName_Action");
+        auditLog.HasIndex(item => item.Username)
+            .HasDatabaseName("IX_AuditLogs_Username");
+    }
+
+    private void AddAuditEntries()
+    {
+        ChangeTracker.DetectChanges();
+        var entries = ChangeTracker.Entries()
+            .Where(entry => IsAuditedEntry(entry))
+            .ToList();
+        if (entries.Count == 0) return;
+
+        var principal = httpContextAccessor.HttpContext?.User;
+        var userId = principal?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+        var username = principal?.FindFirstValue(ClaimTypes.Name) ?? "system";
+        var createdAt = DateTimeOffset.UtcNow;
+
+        foreach (var entry in entries)
+        {
+            var changedProperties = entry.State == EntityState.Added
+                ? entry.Properties.Where(IsSafeProperty).ToList()
+                : entry.Properties.Where(property => property.IsModified && IsSafeProperty(property)).ToList();
+            if (changedProperties.Count == 0) continue;
+
+            var oldValues = entry.State == EntityState.Modified
+                ? changedProperties.ToDictionary(
+                    property => property.Metadata.Name,
+                    property => property.OriginalValue)
+                : null;
+            var newValues = changedProperties.ToDictionary(
+                property => property.Metadata.Name,
+                property => property.CurrentValue);
+
+            AuditLogs.Add(new AuditLog
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                UserId = userId,
+                Username = username,
+                EntityName = entry.Metadata.ClrType.Name,
+                EntityId = entry.Property("Id").CurrentValue?.ToString() ?? string.Empty,
+                Action = ResolveAction(entry),
+                OldValue = oldValues is null ? null : JsonSerializer.Serialize(oldValues, AuditJsonOptions),
+                NewValue = JsonSerializer.Serialize(newValues, AuditJsonOptions),
+                CreatedAt = createdAt
+            });
+        }
+    }
+
+    private static bool IsAuditedEntry(EntityEntry entry) =>
+        entry.State is EntityState.Added or EntityState.Modified &&
+        entry.Entity switch
+        {
+            Asset => true,
+            Assignment => true,
+            StockTransaction => entry.State == EntityState.Added,
+            License => true,
+            MaintenanceTask => true,
+            MaintenanceRequest => true,
+            AppUser => entry.State == EntityState.Added,
+            StockAlert => true,
+            MaintenanceNotification => true,
+            _ => false
+        };
+
+    private static bool IsSafeProperty(PropertyEntry property) =>
+        !SensitivePropertyNames.Contains(property.Metadata.Name) &&
+        !property.Metadata.IsShadowProperty();
+
+    private static string ResolveAction(EntityEntry entry)
+    {
+        if (entry.State == EntityState.Added)
+        {
+            return entry.Entity switch
+            {
+                Assignment => "Zimmet Oluşturma",
+                StockTransaction => "Stok Hareketi",
+                AppUser => "Kullanıcı Oluşturma",
+                MaintenanceRequest => "Talep Oluşturma",
+                StockAlert => "Kritik Stok Bildirimi",
+                MaintenanceNotification => "Bakım Bildirimi",
+                _ => "Oluşturma"
+            };
+        }
+
+        if (entry.Entity is Assignment && entry.Property(nameof(Assignment.ReturnedAt)).IsModified)
+            return "İade";
+
+        if (entry.Entity is MaintenanceTask task)
+        {
+            if (entry.Property(nameof(MaintenanceTask.Status)).IsModified)
+            {
+                return task.Status switch
+                {
+                    MaintenanceTaskStatus.Completed => "Tamamlama",
+                    MaintenanceTaskStatus.Cancelled => "İptal",
+                    _ => "Durum Güncelleme"
+                };
+            }
+            if (entry.Property(nameof(MaintenanceTask.PlannedDate)).IsModified)
+                return "Yeniden Planlama";
+        }
+
+        if (entry.Entity is MaintenanceRequest request)
+        {
+            if (entry.Property(nameof(MaintenanceRequest.Status)).IsModified)
+            {
+                return request.Status switch
+                {
+                    MaintenanceRequestStatus.Assigned => "Atama",
+                    MaintenanceRequestStatus.InProgress => "İşleme Alma",
+                    MaintenanceRequestStatus.Completed => "Tamamlama",
+                    MaintenanceRequestStatus.Cancelled => "İptal",
+                    _ => "Durum Güncelleme"
+                };
+            }
+            return "Talep Güncelleme";
+        }
+
+        return "Güncelleme";
+    }
+
+    private static void ConfigureEmployeesAndAssignments(ModelBuilder modelBuilder)
+    {
+        var employee = modelBuilder.Entity<Employee>();
+
+        employee.ToTable("Employees");
+        employee.HasKey(item => item.Id);
+        employee.Property(item => item.Id).HasMaxLength(64);
+        employee.Property(item => item.EmployeeNo).HasMaxLength(50).IsRequired();
+        employee.Property(item => item.FullName).HasMaxLength(150).IsRequired();
+        employee.Property(item => item.Email).HasMaxLength(254).IsRequired();
+        employee.Property(item => item.Department).HasMaxLength(100).IsRequired();
+        employee.Property(item => item.CreatedAt).HasColumnType("datetimeoffset");
+
+        employee.HasIndex(item => item.EmployeeNo)
+            .IsUnique()
+            .HasDatabaseName("UX_Employees_EmployeeNo");
+
+        employee.HasIndex(item => item.Email)
+            .IsUnique()
+            .HasDatabaseName("UX_Employees_Email");
+
+        var employeeCreatedAt = new DateTimeOffset(2026, 8, 1, 8, 0, 0, TimeSpan.Zero);
+
+        employee.HasData(
+            new Employee { Id = "employee-db-001", EmployeeNo = "EMP-001", FullName = "Demo Kullanıcı 1", Email = "demo.kullanici1@example.test", Department = "BT", IsActive = true, CreatedAt = employeeCreatedAt },
+            new Employee { Id = "employee-db-002", EmployeeNo = "EMP-002", FullName = "Demo Kullanıcı 2", Email = "demo.kullanici2@example.test", Department = "Finans", IsActive = true, CreatedAt = employeeCreatedAt },
+            new Employee { Id = "employee-db-003", EmployeeNo = "EMP-003", FullName = "Demo Kullanıcı 3", Email = "demo.kullanici3@example.test", Department = "İnsan Kaynakları", IsActive = true, CreatedAt = employeeCreatedAt },
+            new Employee { Id = "employee-db-004", EmployeeNo = "EMP-004", FullName = "Demo Kullanıcı 4", Email = "demo.kullanici4@example.test", Department = "Operasyon", IsActive = true, CreatedAt = employeeCreatedAt },
+            new Employee { Id = "employee-db-005", EmployeeNo = "EMP-005", FullName = "Demo Kullanıcı 5", Email = "demo.kullanici5@example.test", Department = "Satış", IsActive = true, CreatedAt = employeeCreatedAt },
+            new Employee { Id = "employee-db-006", EmployeeNo = "EMP-006", FullName = "Demo Kullanıcı 6", Email = "demo.kullanici6@example.test", Department = "Muhasebe", IsActive = true, CreatedAt = employeeCreatedAt },
+            new Employee { Id = "employee-db-007", EmployeeNo = "EMP-007", FullName = "Demo Kullanıcı 7", Email = "demo.kullanici7@example.test", Department = "Pazarlama", IsActive = true, CreatedAt = employeeCreatedAt },
+            new Employee { Id = "employee-db-008", EmployeeNo = "EMP-008", FullName = "Demo Kullanıcı 8", Email = "demo.kullanici8@example.test", Department = "Lojistik", IsActive = true, CreatedAt = employeeCreatedAt },
+            new Employee { Id = "employee-db-009", EmployeeNo = "EMP-009", FullName = "Demo Kullanıcı 9", Email = "demo.kullanici9@example.test", Department = "Operasyon", IsActive = false, CreatedAt = employeeCreatedAt });
+
+        var assignment = modelBuilder.Entity<Assignment>();
+
+        assignment.ToTable("Assignments", table =>
+            table.HasCheckConstraint(
+                "CK_Assignments_ReturnedAt_NotBeforeAssignedAt",
+                "[ReturnedAt] IS NULL OR [ReturnedAt] >= [AssignedAt]"));
+        assignment.HasKey(item => item.Id);
+        assignment.Property(item => item.Id).HasMaxLength(64);
+        assignment.Property(item => item.AssetId).HasMaxLength(64).IsRequired();
+        assignment.Property(item => item.EmployeeId).HasMaxLength(64).IsRequired();
+        assignment.Property(item => item.AssignedAt).HasColumnType("datetimeoffset");
+        assignment.Property(item => item.ReturnedAt).HasColumnType("datetimeoffset");
+        assignment.Property(item => item.AssignedBy).HasMaxLength(150).IsRequired();
+        assignment.Property(item => item.ReturnedBy).HasMaxLength(150);
+        assignment.Property(item => item.Notes).HasMaxLength(1000);
+        assignment.Property(item => item.ReturnNotes).HasMaxLength(1000);
+        assignment.Property(item => item.CreatedAt).HasColumnType("datetimeoffset");
+
+        assignment.HasIndex(item => item.AssetId)
+            .IsUnique()
+            .HasFilter("[ReturnedAt] IS NULL")
+            .HasDatabaseName("UX_Assignments_AssetId_Active");
+
+        assignment.HasIndex(item => item.EmployeeId)
+            .HasDatabaseName("IX_Assignments_EmployeeId");
+
+        assignment.HasOne(item => item.Asset)
+            .WithMany(asset => asset.Assignments)
+            .HasForeignKey(item => item.AssetId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        assignment.HasOne(item => item.Employee)
+            .WithMany(employeeItem => employeeItem.Assignments)
+            .HasForeignKey(item => item.EmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        var assignmentCreatedAt = new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero);
+
+        assignment.HasData(
+            new Assignment { Id = "assignment-db-001", AssetId = "asset-db-001", EmployeeId = "employee-db-001", AssignedAt = new DateTimeOffset(2026, 3, 2, 9, 0, 0, TimeSpan.Zero), AssignedBy = "BT Operasyon", Notes = "Standart çalışma cihazı zimmeti.", CreatedAt = assignmentCreatedAt },
+            new Assignment { Id = "assignment-db-002", AssetId = "asset-db-008", EmployeeId = "employee-db-002", AssignedAt = new DateTimeOffset(2026, 4, 6, 10, 0, 0, TimeSpan.Zero), AssignedBy = "BT Operasyon", Notes = "Kurumsal telefon zimmeti.", CreatedAt = assignmentCreatedAt },
+            new Assignment { Id = "assignment-db-003", AssetId = "asset-db-002", EmployeeId = "employee-db-003", AssignedAt = new DateTimeOffset(2026, 2, 10, 9, 30, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 5, 15, 16, 0, 0, TimeSpan.Zero), AssignedBy = "BT Operasyon", ReturnedBy = "BT Destek", Notes = "Geçici proje cihazı.", ReturnNotes = "Eksiksiz teslim alındı.", CreatedAt = assignmentCreatedAt },
+            new Assignment { Id = "assignment-db-004", AssetId = "asset-db-004", EmployeeId = "employee-db-004", AssignedAt = new DateTimeOffset(2026, 3, 20, 8, 45, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 6, 30, 17, 0, 0, TimeSpan.Zero), AssignedBy = "BT Operasyon", ReturnedBy = "BT Destek", Notes = "Operasyon masası kullanımı.", ReturnNotes = "Cihaz depoya alındı.", CreatedAt = assignmentCreatedAt },
+            new Assignment { Id = "assignment-db-005", AssetId = "asset-db-006", EmployeeId = "employee-db-005", AssignedAt = new DateTimeOffset(2026, 4, 12, 9, 0, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 7, 18, 15, 30, 0, TimeSpan.Zero), AssignedBy = "BT Operasyon", ReturnedBy = "BT Destek", Notes = "Ek çalışma ekranı.", ReturnNotes = "Fiziksel kontrol tamamlandı.", CreatedAt = assignmentCreatedAt },
+            new Assignment { Id = "assignment-db-006", AssetId = "asset-db-010", EmployeeId = "employee-db-006", AssignedAt = new DateTimeOffset(2026, 5, 8, 11, 0, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 7, 22, 14, 0, 0, TimeSpan.Zero), AssignedBy = "BT Operasyon", ReturnedBy = "BT Destek", Notes = "Birim yazıcısı kullanımı.", ReturnNotes = "Çalışır durumda teslim alındı.", CreatedAt = assignmentCreatedAt },
+            new Assignment { Id = "assignment-db-007", AssetId = "asset-db-003", EmployeeId = "employee-db-007", AssignedAt = new DateTimeOffset(2025, 11, 3, 9, 0, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 1, 9, 16, 30, 0, TimeSpan.Zero), AssignedBy = "BT Operasyon", ReturnedBy = "BT Destek", Notes = "Dönemsel kullanım.", ReturnNotes = "Bakım kontrolü için teslim alındı.", CreatedAt = assignmentCreatedAt },
+            new Assignment { Id = "assignment-db-008", AssetId = "asset-db-007", EmployeeId = "employee-db-008", AssignedAt = new DateTimeOffset(2026, 1, 12, 10, 0, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 2, 20, 15, 0, 0, TimeSpan.Zero), AssignedBy = "BT Operasyon", ReturnedBy = "BT Destek", Notes = "Geçici monitör kullanımı.", ReturnNotes = "Teslim kaydı tamamlandı.", CreatedAt = assignmentCreatedAt });
+    }
+
+    private static void ConfigureAppUsers(ModelBuilder modelBuilder)
+    {
+        var appUser = modelBuilder.Entity<AppUser>();
+
+        appUser.ToTable("AppUsers");
+        appUser.HasKey(user => user.Id);
+        appUser.Property(user => user.Id).HasMaxLength(64);
+        appUser.Property(user => user.EmployeeId).HasMaxLength(64);
+        appUser.Property(user => user.Username).HasMaxLength(100).IsRequired();
+        appUser.Property(user => user.Email).HasMaxLength(254).IsRequired();
+        appUser.Property(user => user.PasswordHash).HasMaxLength(512).IsRequired();
+        appUser.Property(user => user.Role).HasConversion<string>().HasMaxLength(30).IsRequired();
+        appUser.Property(user => user.CreatedAt).HasColumnType("datetimeoffset");
+        appUser.Property(user => user.LastLoginAt).HasColumnType("datetimeoffset");
+
+        appUser.HasIndex(user => user.Username)
+            .IsUnique()
+            .HasDatabaseName("UX_AppUsers_Username");
+        appUser.HasIndex(user => user.Email)
+            .IsUnique()
+            .HasDatabaseName("UX_AppUsers_Email");
+        appUser.HasIndex(user => user.EmployeeId)
+            .IsUnique()
+            .HasFilter("[EmployeeId] IS NOT NULL")
+            .HasDatabaseName("UX_AppUsers_EmployeeId");
+
+        appUser.HasOne(user => user.Employee)
+            .WithOne(employee => employee.AppUser)
+            .HasForeignKey<AppUser>(user => user.EmployeeId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        const string demoPasswordHash = "AQAAAAIAAYagAAAAEMWmnyeBUMAPR3BMaPAoDlzXnRlCCuCrvk4eCLxK4dXDv3HDaUF2agezRs6Hfp5wyg==";
+        var createdAt = new DateTimeOffset(2026, 8, 14, 12, 0, 0, TimeSpan.Zero);
+
+        appUser.HasData(
+            new AppUser { Id = "app-user-admin", Username = "admin.demo", Email = "admin.demo@example.test", PasswordHash = demoPasswordHash, Role = AppRole.Admin, IsActive = true, CreatedAt = createdAt },
+            new AppUser { Id = "app-user-it", Username = "it.demo", Email = "it.demo@example.test", PasswordHash = demoPasswordHash, Role = AppRole.IT, IsActive = true, CreatedAt = createdAt },
+            new AppUser { Id = "app-user-employee", EmployeeId = "employee-db-001", Username = "employee.demo", Email = "employee.demo@example.test", PasswordHash = demoPasswordHash, Role = AppRole.Employee, IsActive = true, CreatedAt = createdAt },
+            new AppUser { Id = "app-user-auditor", Username = "auditor.demo", Email = "auditor.demo@example.test", PasswordHash = demoPasswordHash, Role = AppRole.Auditor, IsActive = true, CreatedAt = createdAt },
+            new AppUser { Id = "app-user-inactive", EmployeeId = "employee-db-009", Username = "inactive.demo", Email = "inactive.demo@example.test", PasswordHash = demoPasswordHash, Role = AppRole.Employee, IsActive = false, CreatedAt = createdAt });
     }
 
     private static void ConfigureStockItems(ModelBuilder modelBuilder)

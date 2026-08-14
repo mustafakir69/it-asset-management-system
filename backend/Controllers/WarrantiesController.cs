@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TakipProgrami.Api.Data;
 using TakipProgrami.Api.DTOs;
+using TakipProgrami.Api.Helpers;
 
 namespace TakipProgrami.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/warranties")]
 public sealed class WarrantiesController(ApplicationDbContext dbContext) : ControllerBase
 {
@@ -61,14 +64,7 @@ public sealed class WarrantiesController(ApplicationDbContext dbContext) : Contr
         DateOnly? warrantyEndDate,
         DateOnly today)
     {
-        var remainingDays = warrantyEndDate?.DayNumber - today.DayNumber;
-        var warrantyStatus = remainingDays switch
-        {
-            null => "Garanti Bilgisi Yok",
-            < 0 => "Süresi Doldu",
-            <= 30 => "Yaklaşıyor",
-            _ => "Aktif"
-        };
+        var calculation = WarrantyRules.Calculate(warrantyEndDate, today);
 
         return new WarrantyAssetDto(
             assetId,
@@ -80,7 +76,7 @@ public sealed class WarrantiesController(ApplicationDbContext dbContext) : Contr
             location,
             purchaseDate,
             warrantyEndDate,
-            remainingDays,
-            warrantyStatus);
+            calculation.RemainingDays,
+            calculation.Status);
     }
 }

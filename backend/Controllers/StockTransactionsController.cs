@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TakipProgrami.Api.Data;
@@ -7,6 +8,7 @@ using TakipProgrami.Api.Entities;
 namespace TakipProgrami.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/stock-transactions")]
 public sealed class StockTransactionsController(ApplicationDbContext dbContext) : ControllerBase
 {

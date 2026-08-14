@@ -5,11 +5,12 @@ export interface ContentCardProps {
   children: ReactNode
   title?: ReactNode
   extra?: ReactNode
+  className?: string
 }
 
-function ContentCard({ children, title, extra }: ContentCardProps) {
+function ContentCard({ children, title, extra, className }: ContentCardProps) {
   return (
-    <Card title={title} extra={extra} variant="outlined">
+    <Card className={className} title={title} extra={extra} variant="outlined">
       {children}
     </Card>
   )

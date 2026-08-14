@@ -13,4 +13,5 @@ public sealed class StockItem
     public string Location { get; set; } = string.Empty;
     public bool IsActive { get; set; }
     public ICollection<StockTransaction> Transactions { get; set; } = [];
+    public ICollection<StockAlert> Alerts { get; set; } = [];
 }

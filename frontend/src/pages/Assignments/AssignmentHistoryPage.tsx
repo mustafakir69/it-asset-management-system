@@ -54,8 +54,10 @@ function AssignmentHistoryPage() {
     try {
       const history = await assignmentService.getAssignmentHistory()
       setAssignments(history)
-    } catch {
-      setLoadError('Zimmet geçmişi yüklenirken bir hata oluştu.')
+    } catch (error: unknown) {
+      setLoadError(
+        error instanceof Error ? error.message : 'Zimmet geçmişi yüklenirken bir hata oluştu.',
+      )
     } finally {
       setIsLoading(false)
     }

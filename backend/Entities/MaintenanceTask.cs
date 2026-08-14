@@ -26,4 +26,5 @@ public sealed class MaintenanceTask
     public DateTimeOffset CreatedAt { get; set; }
     public MaintenancePlan MaintenancePlan { get; set; } = null!;
     public Asset Asset { get; set; } = null!;
+    public ICollection<MaintenanceNotification> Notifications { get; set; } = [];
 }

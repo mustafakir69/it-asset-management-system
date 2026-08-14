@@ -1,0 +1,21 @@
+.users-content,
+.users-page .ant-table-wrapper {
+  width: 100%;
+}
+
+.users-page .ant-table-cell {
+  vertical-align: middle;
+}
+
+.user-create-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--app-space-xs);
+}
+
+@media (max-width: 576px) {
+  .users-page .ant-pagination,
+  .user-create-actions {
+    justify-content: flex-start;
+  }
+}

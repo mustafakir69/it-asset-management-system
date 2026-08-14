@@ -1,12 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TakipProgrami.Api.Data;
 using TakipProgrami.Api.DTOs;
 using TakipProgrami.Api.Entities;
+using TakipProgrami.Api.Helpers;
 
 namespace TakipProgrami.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/maintenance/requests")]
 public sealed class MaintenanceRequestsController(ApplicationDbContext dbContext) : ControllerBase
 {
@@ -53,6 +56,7 @@ public sealed class MaintenanceRequestsController(ApplicationDbContext dbContext
     }
 
     [HttpPost]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     public async Task<ActionResult<MaintenanceRequestDto>> Create(
         MaintenanceRequestCreateDto input,
         CancellationToken cancellationToken)
@@ -74,6 +78,7 @@ public sealed class MaintenanceRequestsController(ApplicationDbContext dbContext
     }
 
     [HttpPut("{id}")]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     public async Task<ActionResult<MaintenanceRequestDto>> Update(
         string id,
         MaintenanceRequestUpdateDto input,
@@ -98,6 +103,7 @@ public sealed class MaintenanceRequestsController(ApplicationDbContext dbContext
     }
 
     [HttpPut("{id}/assign")]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     public async Task<ActionResult<MaintenanceRequestDto>> Assign(
         string id,
         MaintenanceRequestAssignDto input,
@@ -114,6 +120,7 @@ public sealed class MaintenanceRequestsController(ApplicationDbContext dbContext
     }
 
     [HttpPut("{id}/start")]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     public async Task<ActionResult<MaintenanceRequestDto>> Start(string id, CancellationToken cancellationToken)
     {
         var request = await FindTracked(id, cancellationToken);
@@ -127,6 +134,7 @@ public sealed class MaintenanceRequestsController(ApplicationDbContext dbContext
     }
 
     [HttpPut("{id}/complete")]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     public async Task<ActionResult<MaintenanceRequestDto>> Complete(
         string id,
         MaintenanceRequestCompleteDto input,
@@ -146,6 +154,7 @@ public sealed class MaintenanceRequestsController(ApplicationDbContext dbContext
     }
 
     [HttpPut("{id}/cancel")]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     public async Task<ActionResult<MaintenanceRequestDto>> Cancel(
         string id,
         MaintenanceRequestCancelDto input,

@@ -12,6 +12,7 @@ public sealed class Asset
     public string Location { get; set; } = string.Empty;
     public DateOnly PurchaseDate { get; set; }
     public DateOnly WarrantyEndDate { get; set; }
+    public ICollection<Assignment> Assignments { get; set; } = [];
     public ICollection<MaintenancePlan> MaintenancePlans { get; set; } = [];
     public ICollection<MaintenanceTask> MaintenanceTasks { get; set; } = [];
     public ICollection<MaintenanceRequest> MaintenanceRequests { get; set; } = [];

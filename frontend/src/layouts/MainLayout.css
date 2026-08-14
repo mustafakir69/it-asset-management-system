@@ -45,7 +45,29 @@
   font-size: 18px;
 }
 
-.main-header .ant-typography {
+.main-header .header-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  min-width: 0;
+  margin-left: auto;
+}
+
+.header-user-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+  text-align: right;
+}
+
+.header-user-details .ant-typography {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -84,6 +106,15 @@
 @media (max-width: 768px) {
   .main-header {
     padding: 0 var(--app-space-sm);
+  }
+
+  .main-header .header-title,
+  .header-user-details {
+    display: none;
+  }
+
+  .header-user .ant-btn > span:not(.ant-btn-icon) {
+    display: none;
   }
 
   .main-content {

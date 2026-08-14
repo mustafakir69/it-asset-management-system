@@ -1,0 +1,23 @@
+.login-page {
+  display: grid;
+  min-height: 100vh;
+  padding: 24px;
+  place-items: center;
+  background:
+    radial-gradient(circle at top left, rgb(22 119 255 / 16%), transparent 36%),
+    var(--app-color-bg);
+}
+
+.login-card {
+  width: min(100%, 420px);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 10%);
+}
+
+.login-heading {
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.login-heading .ant-typography {
+  margin-bottom: 8px;
+}

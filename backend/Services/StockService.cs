@@ -20,7 +20,9 @@ public sealed record StockTransactionResult(
     StockTransactionDto? Transaction = null,
     string? ErrorMessage = null);
 
-public sealed class StockService(ApplicationDbContext dbContext)
+public sealed class StockService(
+    ApplicationDbContext dbContext,
+    NotificationService notificationService)
 {
     public async Task<StockTransactionResult> CreateTransactionAsync(
         string stockItemId,
@@ -79,8 +81,20 @@ public sealed class StockService(ApplicationDbContext dbContext)
         };
 
         dbContext.StockTransactions.Add(transaction);
+        var stockAlert = await notificationService.SyncStockAlertAsync(
+            stockItem,
+            cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         await databaseTransaction.CommitAsync(cancellationToken);
+
+        if (stockAlert is not null)
+        {
+            await notificationService.DeliverStockAlertAsync(
+                stockAlert,
+                stockItem,
+                cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
 
         return new(StockTransactionResultStatus.Success, ToDto(transaction));
     }
