@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TakipProgrami.Api.Data;
 
@@ -11,9 +12,11 @@ using TakipProgrami.Api.Data;
 namespace TakipProgrami.Api.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260814131904_AddStockItems")]
+    partial class AddStockItems
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -507,64 +510,6 @@ namespace TakipProgrami.Api.Data.Migrations
                             Name = "Etiket Şeridi",
                             Unit = "Adet"
                         });
-                });
-
-            modelBuilder.Entity("TakipProgrami.Api.Entities.StockTransaction", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("PersonName")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<string>("StockItemId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<DateTimeOffset>("TransactionDate")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("TransactionType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StockItemId", "TransactionDate")
-                        .HasDatabaseName("IX_StockTransactions_StockItemId_TransactionDate");
-
-                    b.ToTable("StockTransactions", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_StockTransactions_Quantity_Positive", "[Quantity] > 0");
-                        });
-                });
-
-            modelBuilder.Entity("TakipProgrami.Api.Entities.StockTransaction", b =>
-                {
-                    b.HasOne("TakipProgrami.Api.Entities.StockItem", "StockItem")
-                        .WithMany("Transactions")
-                        .HasForeignKey("StockItemId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("StockItem");
-                });
-
-            modelBuilder.Entity("TakipProgrami.Api.Entities.StockItem", b =>
-                {
-                    b.Navigation("Transactions");
                 });
 #pragma warning restore 612, 618
         }

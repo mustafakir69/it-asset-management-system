@@ -1,0 +1,27 @@
+.stock-items-content {
+  width: 100%;
+}
+
+.stock-items-page .ant-select,
+.stock-items-page .ant-table-wrapper {
+  width: 100%;
+}
+
+.stock-items-page .ant-table-cell {
+  vertical-align: middle;
+}
+
+.stock-items-page .ant-table-cell-fix-right {
+  box-shadow: -6px 0 12px rgb(0 0 0 / 4%);
+}
+
+.stock-items-page .ant-table-cell:nth-child(6),
+.stock-items-page .ant-table-cell:nth-child(7) {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 576px) {
+  .stock-items-page .ant-pagination {
+    justify-content: flex-start;
+  }
+}

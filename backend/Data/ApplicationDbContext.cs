@@ -7,6 +7,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     : DbContext(options)
 {
     public DbSet<Asset> Assets => Set<Asset>();
+    public DbSet<StockItem> StockItems => Set<StockItem>();
+    public DbSet<StockTransaction> StockTransactions => Set<StockTransaction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -167,5 +169,308 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
                 PurchaseDate = new DateOnly(2026, 5, 6),
                 WarrantyEndDate = new DateOnly(2028, 5, 6)
             });
+
+        ConfigureStockItems(modelBuilder);
+        ConfigureStockTransactions(modelBuilder);
+    }
+
+    private static void ConfigureStockItems(ModelBuilder modelBuilder)
+    {
+        var stockItem = modelBuilder.Entity<StockItem>();
+
+        stockItem.ToTable("StockItems", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_StockItems_CurrentQuantity_NonNegative",
+                "[CurrentQuantity] >= 0");
+            table.HasCheckConstraint(
+                "CK_StockItems_MinimumQuantity_NonNegative",
+                "[MinimumQuantity] >= 0");
+        });
+
+        stockItem.HasKey(item => item.Id);
+        stockItem.Property(item => item.Id).HasMaxLength(64);
+        stockItem.Property(item => item.ItemCode).HasMaxLength(50).IsRequired();
+        stockItem.Property(item => item.Name).HasMaxLength(150).IsRequired();
+        stockItem.Property(item => item.Category).HasMaxLength(100).IsRequired();
+        stockItem.Property(item => item.BrandModel).HasMaxLength(150).IsRequired();
+        stockItem.Property(item => item.Unit).HasMaxLength(30).IsRequired();
+        stockItem.Property(item => item.Location).HasMaxLength(150).IsRequired();
+
+        stockItem.HasIndex(item => item.ItemCode)
+            .IsUnique()
+            .HasDatabaseName("UX_StockItems_ItemCode");
+
+        stockItem.HasData(
+            new StockItem
+            {
+                Id = "stock-item-001",
+                ItemCode = "STK-2026-0001",
+                Name = "Kablosuz Mouse",
+                Category = "Çevre Birimi",
+                BrandModel = "Logitech M185",
+                Unit = "Adet",
+                CurrentQuantity = 35,
+                MinimumQuantity = 10,
+                Location = "İstanbul Depo",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-002",
+                ItemCode = "STK-2026-0002",
+                Name = "Kablolu Klavye",
+                Category = "Çevre Birimi",
+                BrandModel = "Logitech K120",
+                Unit = "Adet",
+                CurrentQuantity = 18,
+                MinimumQuantity = 8,
+                Location = "İstanbul Depo",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-003",
+                ItemCode = "STK-2026-0003",
+                Name = "USB Kulaklık",
+                Category = "Çevre Birimi",
+                BrandModel = "Jabra Evolve2 30",
+                Unit = "Adet",
+                CurrentQuantity = 6,
+                MinimumQuantity = 5,
+                Location = "Ankara Ofis",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-004",
+                ItemCode = "STK-2026-0004",
+                Name = "HDMI Kablo 2 m",
+                Category = "Kablo",
+                BrandModel = "Ugreen High Speed",
+                Unit = "Adet",
+                CurrentQuantity = 12,
+                MinimumQuantity = 12,
+                Location = "İstanbul Depo",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-005",
+                ItemCode = "STK-2026-0005",
+                Name = "DisplayPort Kablo 1,8 m",
+                Category = "Kablo",
+                BrandModel = "Ugreen DP 1.4",
+                Unit = "Adet",
+                CurrentQuantity = 4,
+                MinimumQuantity = 8,
+                Location = "İstanbul Depo",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-006",
+                ItemCode = "STK-2026-0006",
+                Name = "Ethernet Kablo 3 m",
+                Category = "Kablo",
+                BrandModel = "Digitus Cat6",
+                Unit = "Adet",
+                CurrentQuantity = 50,
+                MinimumQuantity = 20,
+                Location = "İstanbul Depo",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-007",
+                ItemCode = "STK-2026-0007",
+                Name = "USB Bellek 64 GB",
+                Category = "Depolama",
+                BrandModel = "Kingston DataTraveler Exodia",
+                Unit = "Adet",
+                CurrentQuantity = 7,
+                MinimumQuantity = 10,
+                Location = "Ankara Ofis",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-008",
+                ItemCode = "STK-2026-0008",
+                Name = "Siyah Toner",
+                Category = "Sarf Malzeme",
+                BrandModel = "HP 59A",
+                Unit = "Adet",
+                CurrentQuantity = 3,
+                MinimumQuantity = 5,
+                Location = "İstanbul Depo",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-009",
+                ItemCode = "STK-2026-0009",
+                Name = "USB-C HDMI Adaptör",
+                Category = "Adaptör",
+                BrandModel = "Baseus Metal Gleam",
+                Unit = "Adet",
+                CurrentQuantity = 14,
+                MinimumQuantity = 6,
+                Location = "İzmir Ofis",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-010",
+                ItemCode = "STK-2026-0010",
+                Name = "Laptop Şarj Adaptörü",
+                Category = "Güç Aksesuarı",
+                BrandModel = "Lenovo USB-C 65W",
+                Unit = "Adet",
+                CurrentQuantity = 5,
+                MinimumQuantity = 5,
+                Location = "İstanbul Depo",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-011",
+                ItemCode = "STK-2026-0011",
+                Name = "Laptop Şarj Adaptörü",
+                Category = "Güç Aksesuarı",
+                BrandModel = "Dell USB-C 65W",
+                Unit = "Adet",
+                CurrentQuantity = 9,
+                MinimumQuantity = 4,
+                Location = "Ankara Ofis",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-012",
+                ItemCode = "STK-2026-0012",
+                Name = "AA Pil",
+                Category = "Sarf Malzeme",
+                BrandModel = "Duracell Alkalin 10'lu",
+                Unit = "Paket",
+                CurrentQuantity = 40,
+                MinimumQuantity = 20,
+                Location = "İstanbul Depo",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-013",
+                ItemCode = "STK-2026-0013",
+                Name = "SSD 1 TB",
+                Category = "Depolama",
+                BrandModel = "Samsung 990 EVO Plus",
+                Unit = "Adet",
+                CurrentQuantity = 6,
+                MinimumQuantity = 3,
+                Location = "İstanbul Depo",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-014",
+                ItemCode = "STK-2026-0014",
+                Name = "Web Kamera",
+                Category = "Çevre Birimi",
+                BrandModel = "Logitech C920",
+                Unit = "Adet",
+                CurrentQuantity = 3,
+                MinimumQuantity = 4,
+                Location = "Bursa Şube",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-015",
+                ItemCode = "STK-2026-0015",
+                Name = "USB-C Kablo 2 m",
+                Category = "Kablo",
+                BrandModel = "Ugreen 100W",
+                Unit = "Adet",
+                CurrentQuantity = 22,
+                MinimumQuantity = 10,
+                Location = "İstanbul Depo",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-016",
+                ItemCode = "STK-2026-0016",
+                Name = "Akım Korumalı Priz",
+                Category = "Güç Aksesuarı",
+                BrandModel = "Schneider 6'lı",
+                Unit = "Adet",
+                CurrentQuantity = 8,
+                MinimumQuantity = 5,
+                Location = "İzmir Ofis",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-017",
+                ItemCode = "STK-2026-0017",
+                Name = "Termal Macun",
+                Category = "Sarf Malzeme",
+                BrandModel = "Arctic MX-6 4 g",
+                Unit = "Adet",
+                CurrentQuantity = 2,
+                MinimumQuantity = 3,
+                Location = "İstanbul Depo",
+                IsActive = true
+            },
+            new StockItem
+            {
+                Id = "stock-item-018",
+                ItemCode = "STK-2026-0018",
+                Name = "Etiket Şeridi",
+                Category = "Sarf Malzeme",
+                BrandModel = "Brother TZe-231",
+                Unit = "Adet",
+                CurrentQuantity = 15,
+                MinimumQuantity = 6,
+                Location = "Ankara Ofis",
+                IsActive = true
+            });
+    }
+
+    private static void ConfigureStockTransactions(ModelBuilder modelBuilder)
+    {
+        var stockTransaction = modelBuilder.Entity<StockTransaction>();
+
+        stockTransaction.ToTable("StockTransactions", table =>
+            table.HasCheckConstraint(
+                "CK_StockTransactions_Quantity_Positive",
+                "[Quantity] > 0"));
+
+        stockTransaction.HasKey(transaction => transaction.Id);
+        stockTransaction.Property(transaction => transaction.Id).HasMaxLength(64);
+        stockTransaction.Property(transaction => transaction.StockItemId).HasMaxLength(64);
+        stockTransaction.Property(transaction => transaction.TransactionType)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired();
+        stockTransaction.Property(transaction => transaction.TransactionDate)
+            .HasColumnType("datetimeoffset");
+        stockTransaction.Property(transaction => transaction.PersonName)
+            .HasMaxLength(150)
+            .IsRequired();
+        stockTransaction.Property(transaction => transaction.Note).HasMaxLength(500);
+
+        stockTransaction.HasIndex(transaction => new
+            {
+                transaction.StockItemId,
+                transaction.TransactionDate
+            })
+            .HasDatabaseName("IX_StockTransactions_StockItemId_TransactionDate");
+
+        stockTransaction.HasOne(transaction => transaction.StockItem)
+            .WithMany(item => item.Transactions)
+            .HasForeignKey(transaction => transaction.StockItemId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

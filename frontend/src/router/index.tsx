@@ -11,6 +11,9 @@ import AssetsPage from '../pages/Assets/AssetsPage'
 import DashboardPage from '../pages/Dashboard/DashboardPage'
 import NotFoundPage from '../pages/NotFoundPage'
 import PlaceholderPage from '../pages/PlaceholderPage'
+import StockItemCreatePage from '../pages/Stock/StockItemCreatePage'
+import StockItemDetailPage from '../pages/Stock/StockItemDetailPage'
+import StockItemsPage from '../pages/Stock/StockItemsPage'
 
 export const router = createBrowserRouter([
   {
@@ -41,9 +44,11 @@ export const router = createBrowserRouter([
       { path: 'assignments/history', element: <AssignmentHistoryPage /> },
       { path: 'assignments/:id', element: <AssignmentDetailPage /> },
       { path: 'my-assignments', element: <PlaceholderPage title="Zimmetlerim" /> },
-      { path: 'stock', element: <PlaceholderPage title="Stok Durumu" /> },
+      { path: 'stock', element: <StockItemsPage /> },
+      { path: 'stock/new', element: <StockItemCreatePage /> },
       { path: 'stock/movements', element: <PlaceholderPage title="Stok Hareketleri" /> },
       { path: 'stock/critical', element: <PlaceholderPage title="Kritik Stoklar" /> },
+      { path: 'stock/:id', element: <StockItemDetailPage /> },
       { path: 'warranties', element: <PlaceholderPage title="Garanti Listesi" /> },
       { path: 'warranties/expiring', element: <PlaceholderPage title="Süresi Yaklaşan Garantiler" /> },
       { path: 'licenses', element: <PlaceholderPage title="Lisans Listesi" /> },
