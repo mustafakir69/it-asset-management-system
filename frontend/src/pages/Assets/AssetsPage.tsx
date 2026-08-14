@@ -47,8 +47,12 @@ function AssetsPage() {
     try {
       const assetData = await assetService.getAssets()
       setAssets(assetData)
-    } catch {
-      setLoadError('Envanter verileri yüklenirken bir hata oluştu.')
+    } catch (error: unknown) {
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : 'Envanter verileri yüklenirken bir hata oluştu.',
+      )
     } finally {
       setIsLoading(false)
     }

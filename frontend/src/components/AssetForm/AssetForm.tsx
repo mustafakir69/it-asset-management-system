@@ -165,7 +165,11 @@ function AssetForm({
         </Col>
 
         <Col xs={24} md={12}>
-          <Form.Item label="Satın Alma Tarihi" name="purchaseDate">
+          <Form.Item
+            label="Satın Alma Tarihi"
+            name="purchaseDate"
+            rules={[{ required: true, message: 'Satın alma tarihini seçin.' }]}
+          >
             <DatePicker format="DD.MM.YYYY" placeholder="Satın alma tarihini seçin" />
           </Form.Item>
         </Col>
@@ -175,7 +179,10 @@ function AssetForm({
             dependencies={['purchaseDate']}
             label="Garanti Bitiş Tarihi"
             name="warrantyEndDate"
-            rules={[{ validator: validateWarrantyEndDate }]}
+            rules={[
+              { required: true, message: 'Garanti bitiş tarihini seçin.' },
+              { validator: validateWarrantyEndDate },
+            ]}
           >
             <DatePicker format="DD.MM.YYYY" placeholder="Garanti bitiş tarihini seçin" />
           </Form.Item>

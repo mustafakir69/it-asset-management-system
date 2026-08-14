@@ -33,8 +33,10 @@ function AssetEditPage() {
       }
 
       setAsset(assetData)
-    } catch {
-      setLoadError('Cihaz bilgileri yüklenirken bir hata oluştu.')
+    } catch (error: unknown) {
+      setLoadError(
+        error instanceof Error ? error.message : 'Cihaz bilgileri yüklenirken bir hata oluştu.',
+      )
     } finally {
       setIsLoading(false)
     }
