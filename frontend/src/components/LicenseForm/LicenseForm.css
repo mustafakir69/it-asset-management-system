@@ -1,0 +1,21 @@
+.license-form .ant-picker,
+.license-form .ant-select,
+.license-form .ant-input-number {
+  width: 100%;
+}
+
+.license-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--app-space-sm);
+  border-top: 1px solid #f0f0f0;
+}
+
+@media (max-width: 576px) {
+  .license-form-actions,
+  .license-form-actions .ant-space,
+  .license-form-actions .ant-space-item,
+  .license-form-actions .ant-btn {
+    width: 100%;
+  }
+}

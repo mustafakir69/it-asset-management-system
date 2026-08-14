@@ -1,0 +1,26 @@
+.licenses-content,
+.licenses-table-content,
+.licenses-page .ant-select,
+.licenses-page .ant-table-wrapper {
+  width: 100%;
+}
+
+.licenses-page .ant-table-cell {
+  vertical-align: middle;
+}
+
+.licenses-page .ant-table-cell-fix-right {
+  box-shadow: -6px 0 12px rgb(0 0 0 / 4%);
+}
+
+.licenses-page .ant-table-cell:nth-child(5),
+.licenses-page .ant-table-cell:nth-child(6),
+.licenses-page .ant-table-cell:nth-child(7) {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 576px) {
+  .licenses-page .ant-pagination {
+    justify-content: flex-start;
+  }
+}

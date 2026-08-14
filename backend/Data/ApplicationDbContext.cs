@@ -9,6 +9,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<Asset> Assets => Set<Asset>();
     public DbSet<StockItem> StockItems => Set<StockItem>();
     public DbSet<StockTransaction> StockTransactions => Set<StockTransaction>();
+    public DbSet<License> Licenses => Set<License>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -172,6 +173,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 
         ConfigureStockItems(modelBuilder);
         ConfigureStockTransactions(modelBuilder);
+        ConfigureLicenses(modelBuilder);
     }
 
     private static void ConfigureStockItems(ModelBuilder modelBuilder)
@@ -472,5 +474,182 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             .WithMany(item => item.Transactions)
             .HasForeignKey(transaction => transaction.StockItemId)
             .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureLicenses(ModelBuilder modelBuilder)
+    {
+        var license = modelBuilder.Entity<License>();
+
+        license.ToTable("Licenses", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_Licenses_TotalSeats_NonNegative",
+                "[TotalSeats] >= 0");
+            table.HasCheckConstraint(
+                "CK_Licenses_UsedSeats_NonNegative",
+                "[UsedSeats] >= 0");
+            table.HasCheckConstraint(
+                "CK_Licenses_UsedSeats_NotGreaterThanTotal",
+                "[UsedSeats] <= [TotalSeats]");
+            table.HasCheckConstraint(
+                "CK_Licenses_ExpirationDate_NotBeforeStartDate",
+                "[ExpirationDate] IS NULL OR [ExpirationDate] >= [StartDate]");
+        });
+
+        license.HasKey(item => item.Id);
+        license.Property(item => item.Id).HasMaxLength(64);
+        license.Property(item => item.LicenseCode).HasMaxLength(50).IsRequired();
+        license.Property(item => item.ProductName).HasMaxLength(150).IsRequired();
+        license.Property(item => item.Vendor).HasMaxLength(100).IsRequired();
+        license.Property(item => item.LicenseType).HasMaxLength(100).IsRequired();
+        license.Property(item => item.StartDate).HasColumnType("date");
+        license.Property(item => item.ExpirationDate).HasColumnType("date");
+        license.Property(item => item.Notes).HasMaxLength(1000);
+
+        license.HasIndex(item => item.LicenseCode)
+            .IsUnique()
+            .HasDatabaseName("UX_Licenses_LicenseCode");
+
+        license.HasData(
+            new License
+            {
+                Id = "license-001",
+                LicenseCode = "LIC-M365-001",
+                ProductName = "Microsoft 365 Business Premium",
+                Vendor = "Microsoft",
+                LicenseType = "Yıllık Abonelik",
+                TotalSeats = 120,
+                UsedSeats = 98,
+                StartDate = new DateOnly(2026, 1, 1),
+                ExpirationDate = new DateOnly(2027, 1, 1),
+                IsActive = true,
+                Notes = "Kurumsal kullanıcı lisansları"
+            },
+            new License
+            {
+                Id = "license-002",
+                LicenseCode = "LIC-W11-002",
+                ProductName = "Windows 11 Pro",
+                Vendor = "Microsoft",
+                LicenseType = "Cihaz Bazlı",
+                TotalSeats = 80,
+                UsedSeats = 74,
+                StartDate = new DateOnly(2025, 9, 1),
+                ExpirationDate = null,
+                IsActive = true,
+                Notes = "Süresiz cihaz lisansları"
+            },
+            new License
+            {
+                Id = "license-003",
+                LicenseCode = "LIC-ACROBAT-003",
+                ProductName = "Adobe Acrobat Pro",
+                Vendor = "Adobe",
+                LicenseType = "Yıllık Abonelik",
+                TotalSeats = 35,
+                UsedSeats = 31,
+                StartDate = new DateOnly(2025, 8, 25),
+                ExpirationDate = new DateOnly(2026, 8, 25),
+                IsActive = true,
+                Notes = "Finans ve hukuk ekipleri"
+            },
+            new License
+            {
+                Id = "license-004",
+                LicenseCode = "LIC-CC-004",
+                ProductName = "Adobe Creative Cloud",
+                Vendor = "Adobe",
+                LicenseType = "Yıllık Abonelik",
+                TotalSeats = 18,
+                UsedSeats = 16,
+                StartDate = new DateOnly(2025, 9, 5),
+                ExpirationDate = new DateOnly(2026, 9, 5),
+                IsActive = true,
+                Notes = "Tasarım ekibi"
+            },
+            new License
+            {
+                Id = "license-005",
+                LicenseCode = "LIC-JB-005",
+                ProductName = "JetBrains All Products Pack",
+                Vendor = "JetBrains",
+                LicenseType = "Yıllık Abonelik",
+                TotalSeats = 25,
+                UsedSeats = 22,
+                StartDate = new DateOnly(2025, 7, 31),
+                ExpirationDate = new DateOnly(2026, 7, 31),
+                IsActive = true,
+                Notes = "Yazılım geliştirme ekibi"
+            },
+            new License
+            {
+                Id = "license-006",
+                LicenseCode = "LIC-VS-006",
+                ProductName = "Microsoft Visual Studio Professional",
+                Vendor = "Microsoft",
+                LicenseType = "Yıllık Abonelik",
+                TotalSeats = 30,
+                UsedSeats = 28,
+                StartDate = new DateOnly(2025, 6, 15),
+                ExpirationDate = new DateOnly(2026, 6, 15),
+                IsActive = true,
+                Notes = "Geliştirme araçları"
+            },
+            new License
+            {
+                Id = "license-007",
+                LicenseCode = "LIC-CAD-007",
+                ProductName = "AutoCAD",
+                Vendor = "Autodesk",
+                LicenseType = "Eşzamanlı Kullanım",
+                TotalSeats = 12,
+                UsedSeats = 9,
+                StartDate = new DateOnly(2026, 4, 1),
+                ExpirationDate = new DateOnly(2027, 4, 1),
+                IsActive = true,
+                Notes = "Teknik tasarım lisansları"
+            },
+            new License
+            {
+                Id = "license-008",
+                LicenseCode = "LIC-ESET-008",
+                ProductName = "ESET Endpoint Security",
+                Vendor = "ESET",
+                LicenseType = "Yıllık Abonelik",
+                TotalSeats = 350,
+                UsedSeats = 324,
+                StartDate = new DateOnly(2026, 3, 1),
+                ExpirationDate = new DateOnly(2027, 3, 1),
+                IsActive = true,
+                Notes = "Uç nokta güvenliği"
+            },
+            new License
+            {
+                Id = "license-009",
+                LicenseCode = "LIC-ZOOM-009",
+                ProductName = "Zoom Workplace Business",
+                Vendor = "Zoom",
+                LicenseType = "Yıllık Abonelik",
+                TotalSeats = 45,
+                UsedSeats = 12,
+                StartDate = new DateOnly(2025, 12, 1),
+                ExpirationDate = new DateOnly(2026, 12, 1),
+                IsActive = false,
+                Notes = "Kullanımdan kaldırılan paket"
+            },
+            new License
+            {
+                Id = "license-010",
+                LicenseCode = "LIC-POWERBI-010",
+                ProductName = "Power BI Pro",
+                Vendor = "Microsoft",
+                LicenseType = "Aylık Abonelik",
+                TotalSeats = 50,
+                UsedSeats = 37,
+                StartDate = new DateOnly(2026, 8, 1),
+                ExpirationDate = new DateOnly(2026, 9, 1),
+                IsActive = false,
+                Notes = "Geçici olarak pasife alınmış paket"
+            });
     }
 }

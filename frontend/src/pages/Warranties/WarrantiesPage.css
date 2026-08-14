@@ -1,0 +1,28 @@
+.warranties-content,
+.warranties-table-content,
+.warranties-page .ant-select,
+.warranties-page .ant-table-wrapper {
+  width: 100%;
+}
+
+.warranties-page .ant-table-cell {
+  vertical-align: middle;
+}
+
+.warranties-page .ant-table-cell-fix-right {
+  box-shadow: -6px 0 12px rgb(0 0 0 / 4%);
+}
+
+.warranties-page .warranty-row-approaching > .ant-table-cell {
+  background: #fffbe6;
+}
+
+.warranties-page .warranty-row-approaching:hover > .ant-table-cell {
+  background: #fff7cc !important;
+}
+
+@media (max-width: 576px) {
+  .warranties-page .ant-pagination {
+    justify-content: flex-start;
+  }
+}

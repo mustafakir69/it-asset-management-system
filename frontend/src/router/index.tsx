@@ -9,11 +9,16 @@ import AssetDetailPage from '../pages/Assets/AssetDetailPage'
 import AssetEditPage from '../pages/Assets/AssetEditPage'
 import AssetsPage from '../pages/Assets/AssetsPage'
 import DashboardPage from '../pages/Dashboard/DashboardPage'
+import LicenseCreatePage from '../pages/Licenses/LicenseCreatePage'
+import LicenseDetailPage from '../pages/Licenses/LicenseDetailPage'
+import LicenseEditPage from '../pages/Licenses/LicenseEditPage'
+import LicensesPage from '../pages/Licenses/LicensesPage'
 import NotFoundPage from '../pages/NotFoundPage'
 import PlaceholderPage from '../pages/PlaceholderPage'
 import StockItemCreatePage from '../pages/Stock/StockItemCreatePage'
 import StockItemDetailPage from '../pages/Stock/StockItemDetailPage'
 import StockItemsPage from '../pages/Stock/StockItemsPage'
+import WarrantiesPage from '../pages/Warranties/WarrantiesPage'
 
 export const router = createBrowserRouter([
   {
@@ -49,11 +54,13 @@ export const router = createBrowserRouter([
       { path: 'stock/movements', element: <PlaceholderPage title="Stok Hareketleri" /> },
       { path: 'stock/critical', element: <PlaceholderPage title="Kritik Stoklar" /> },
       { path: 'stock/:id', element: <StockItemDetailPage /> },
-      { path: 'warranties', element: <PlaceholderPage title="Garanti Listesi" /> },
+      { path: 'warranties', element: <WarrantiesPage /> },
       { path: 'warranties/expiring', element: <PlaceholderPage title="Süresi Yaklaşan Garantiler" /> },
-      { path: 'licenses', element: <PlaceholderPage title="Lisans Listesi" /> },
+      { path: 'licenses', element: <LicensesPage /> },
+      { path: 'licenses/new', element: <LicenseCreatePage /> },
       { path: 'licenses/expiring', element: <PlaceholderPage title="Süresi Yaklaşan Lisanslar" /> },
-      { path: 'licenses/:licenseId', element: <PlaceholderPage title="Lisans Detayı" /> },
+      { path: 'licenses/:id/edit', element: <LicenseEditPage /> },
+      { path: 'licenses/:id', element: <LicenseDetailPage /> },
       { path: 'my-licenses', element: <PlaceholderPage title="Lisanslarım" /> },
       { path: 'maintenance/plans', element: <PlaceholderPage title="Bakım Planları" /> },
       { path: 'maintenance/tasks', element: <PlaceholderPage title="Bakım Görevleri" /> },
