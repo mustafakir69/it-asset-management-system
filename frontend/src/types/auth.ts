@@ -3,6 +3,8 @@ export type UserRole = 'Admin' | 'IT' | 'Employee'
 export interface AuthUser {
   id: string
   employeeId: string | null
+  fullName: string
+  department: string | null
   username: string
   email: string
   role: UserRole

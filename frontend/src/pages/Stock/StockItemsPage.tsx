@@ -1,5 +1,6 @@
 import {
   ClearOutlined,
+  EditOutlined,
   EyeOutlined,
   MoreOutlined,
   PlusOutlined,
@@ -26,6 +27,7 @@ import { ContentCard, EmptyState, ErrorState, LoadingState, PageHeader } from '.
 import { stockService } from '../../services/stockService'
 import type { StockItem, StockStatus } from '../../types/stockItem'
 import StockTransactionModal from './StockTransactionModal'
+import MinimumStockModal from './MinimumStockModal'
 import './StockItemsPage.css'
 
 interface StockFilters {
@@ -60,6 +62,7 @@ function StockItemsPage() {
   const [filters, setFilters] = useState<StockFilters>(initialFilters)
   const [pagination, setPagination] = useState<StockPagination>({ current: 1, pageSize: 10 })
   const [transactionStockItem, setTransactionStockItem] = useState<StockItem | null>(null)
+  const [minimumStockItem, setMinimumStockItem] = useState<StockItem | null>(null)
 
   const loadStockItems = useCallback(async () => {
     setIsLoading(true)
@@ -138,6 +141,12 @@ function StockItemsPage() {
       icon: <EyeOutlined />,
       label: 'Görüntüle',
       onClick: () => void navigate(`/stock/${item.id}`),
+    },
+    {
+      key: 'minimum-stock',
+      icon: <EditOutlined />,
+      label: 'Minimum Stok Düzenle',
+      onClick: () => setMinimumStockItem(item),
     },
     {
       key: 'movement',
@@ -336,6 +345,15 @@ function StockItemsPage() {
         onSuccess={loadStockItems}
         open={transactionStockItem !== null}
         stockItem={transactionStockItem}
+      />
+      <MinimumStockModal
+        onCancel={() => setMinimumStockItem(null)}
+        onSuccess={(updated) => {
+          setStockItems((current) => current.map((item) => item.id === updated.id ? updated : item))
+          setMinimumStockItem(null)
+        }}
+        open={minimumStockItem !== null}
+        stockItem={minimumStockItem}
       />
     </section>
   )

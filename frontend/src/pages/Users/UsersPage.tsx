@@ -38,27 +38,43 @@ function UsersPage() {
 
   const columns: TableColumnsType<ManagedUser> = [
     {
-      title: 'Kullanıcı Adı',
-      dataIndex: 'username',
-      key: 'username',
-      width: 160,
+      title: 'Ad Soyad',
+      dataIndex: 'fullName',
+      key: 'fullName',
+      ellipsis: true,
+      width: 180,
       render: (value: string) => <Typography.Text strong>{value}</Typography.Text>,
     },
     {
-      title: 'Ad Soyad / Çalışan',
-      dataIndex: 'employeeName',
-      key: 'employeeName',
+      title: 'Birim',
+      dataIndex: 'department',
+      key: 'department',
       ellipsis: true,
-      width: 190,
+      width: 150,
       render: (value: string | null) => value ?? '—',
     },
-    { title: 'E-posta', dataIndex: 'email', key: 'email', ellipsis: true, width: 220 },
-    { title: 'Rol', dataIndex: 'roleDisplayName', key: 'role', width: 170 },
+    {
+      title: 'Kullanıcı Adı',
+      dataIndex: 'username',
+      key: 'username',
+      width: 150,
+      responsive: ['md'],
+    },
+    {
+      title: 'E-posta',
+      dataIndex: 'email',
+      key: 'email',
+      ellipsis: true,
+      width: 210,
+      responsive: ['lg'],
+    },
+    { title: 'Rol', dataIndex: 'roleDisplayName', key: 'role', width: 140 },
     {
       title: 'Durum',
       key: 'status',
       width: 100,
-      render: (_value, user) => <StatusTag status={user.isActive ? 'Aktif' : 'Pasif'} />,
+      dataIndex: 'status',
+      render: (value: ManagedUser['status']) => <StatusTag status={value} />,
     },
     {
       title: 'İşlemler',
@@ -113,7 +129,7 @@ function UsersPage() {
                 showTotal: (total) => `Toplam ${total} kullanıcı`,
               }}
               rowKey="id"
-              scroll={{ x: 930 }}
+              scroll={{ x: 900 }}
               size="small"
               tableLayout="fixed"
             />

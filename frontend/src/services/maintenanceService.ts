@@ -86,10 +86,7 @@ const getOne = async <T>(url: string, mapper: (value: unknown) => T, fallback: s
 
 export const maintenanceService = {
   getPlans: () => getList('/api/maintenance/plans', mapPlan, 'Bakım planları yüklenemedi.'),
-  getPlanById: (id: string) => getOne(`/api/maintenance/plans/${encodeURIComponent(id)}`, mapPlan, 'Bakım planı yüklenemedi.'),
   async createPlan(input: MaintenancePlanInput) { try { return mapPlan((await apiClient.post('/api/maintenance/plans', input)).data) } catch (error) { throw apiError(error, 'Bakım planı kaydedilemedi.') } },
-  async updatePlan(id: string, input: MaintenancePlanInput) { try { return mapPlan((await apiClient.put(`/api/maintenance/plans/${encodeURIComponent(id)}`, input)).data) } catch (error) { throw apiError(error, 'Bakım planı güncellenemedi.') } },
-  async updatePlanStatus(id: string, isActive: boolean) { try { return mapPlan((await apiClient.put(`/api/maintenance/plans/${encodeURIComponent(id)}/status`, { isActive })).data) } catch (error) { throw apiError(error, 'Bakım planı durumu güncellenemedi.') } },
   getTasks: () => getList('/api/maintenance/tasks', mapTask, 'Bakım görevleri yüklenemedi.'),
   getTaskById: (id: string) => getOne(`/api/maintenance/tasks/${encodeURIComponent(id)}`, mapTask, 'Bakım görevi yüklenemedi.'),
   async completeTask(id: string, input: MaintenanceTaskCompleteInput) { try { return mapTask((await apiClient.put(`/api/maintenance/tasks/${encodeURIComponent(id)}/complete`, input)).data) } catch (error) { throw apiError(error, 'Bakım görevi tamamlanamadı.') } },

@@ -104,6 +104,29 @@ public sealed class StockItemsController(
         return CreatedAtAction(nameof(GetById), new { id = stockItem.Id }, response);
     }
 
+    [HttpPut("{id}/minimum-quantity")]
+    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
+    [ProducesResponseType<StockItemDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<StockItemDto>> UpdateMinimumQuantity(
+        string id,
+        StockItemMinimumQuantityUpdateDto request,
+        CancellationToken cancellationToken)
+    {
+        var result = await stockService.UpdateMinimumQuantityAsync(
+            id,
+            request.MinimumQuantity,
+            cancellationToken);
+
+        return result.Status switch
+        {
+            StockItemUpdateResultStatus.Success => Ok(result.StockItem),
+            StockItemUpdateResultStatus.StockItemNotFound => NotFoundProblem(result.ErrorMessage!),
+            _ => BadRequestProblem(result.ErrorMessage!)
+        };
+    }
+
     [HttpPost("{id}/transactions")]
     [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
     [ProducesResponseType<StockTransactionDto>(StatusCodes.Status201Created)]
@@ -187,16 +210,5 @@ public sealed class StockItemsController(
         });
 
     private static StockItemDto ToDto(StockItem item) =>
-        new(
-            item.Id,
-            item.ItemCode,
-            item.Name,
-            item.Category,
-            item.BrandModel,
-            item.Unit,
-            item.CurrentQuantity,
-            item.MinimumQuantity,
-            item.Location,
-            item.IsActive,
-            item.CurrentQuantity <= item.MinimumQuantity);
+        StockService.ToDto(item);
 }

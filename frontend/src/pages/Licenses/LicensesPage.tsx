@@ -20,7 +20,6 @@ import {
   Row,
   Select,
   Space,
-  Statistic,
   Table,
   Tag,
   Tooltip,
@@ -30,7 +29,14 @@ import type { MenuProps, TableColumnsType, TablePaginationConfig } from 'antd'
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ContentCard, EmptyState, ErrorState, LoadingState, PageHeader } from '../../components'
+import {
+  ActionStatisticCard,
+  ContentCard,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PageHeader,
+} from '../../components'
 import { licenseService } from '../../services/licenseService'
 import { licenseStatuses, type License, type LicenseStatus } from '../../types/license'
 import { formatDate } from '../../utils'
@@ -52,6 +58,7 @@ interface SummaryItem {
   value: number
   color: string
   icon: ReactNode
+  status?: LicenseStatus | null
 }
 
 const initialFilters: LicenseFilters = { search: '' }
@@ -110,6 +117,7 @@ function LicensesPage() {
         value: licenses.length,
         color: '#1677ff',
         icon: <FileProtectOutlined />,
+        status: null,
       },
       {
         key: 'active',
@@ -117,6 +125,7 @@ function LicensesPage() {
         value: countByStatus('Aktif'),
         color: '#389e0d',
         icon: <CheckCircleOutlined />,
+        status: 'Aktif',
       },
       {
         key: 'approaching',
@@ -124,6 +133,7 @@ function LicensesPage() {
         value: countByStatus('Yaklaşıyor'),
         color: '#d48806',
         icon: <ClockCircleOutlined />,
+        status: 'Yaklaşıyor',
       },
       {
         key: 'expired',
@@ -131,6 +141,15 @@ function LicensesPage() {
         value: countByStatus('Süresi Doldu'),
         color: '#cf1322',
         icon: <CloseCircleOutlined />,
+        status: 'Süresi Doldu',
+      },
+      {
+        key: 'inactive',
+        title: 'Pasif Lisans',
+        value: countByStatus('Pasif'),
+        color: '#595959',
+        icon: <StopOutlined />,
+        status: 'Pasif',
       },
       {
         key: 'rights',
@@ -172,6 +191,14 @@ function LicensesPage() {
     setFilters(initialFilters)
     setPagination((current) => ({ ...current, current: 1 }))
   }
+
+  const selectSummary = (status: LicenseStatus | null) => {
+    updateFilters({ status: status === null || filters.status === status ? undefined : status })
+  }
+
+  const emptyDescription = filters.status
+    ? `Bu filtreye uygun “${filters.status}” lisans bulunmuyor.`
+    : 'Arama ölçütlerine uygun lisans bulunmuyor.'
 
   const handlePaginationChange = (nextPagination: TablePaginationConfig) => {
     setPagination({
@@ -301,15 +328,20 @@ function LicensesPage() {
         <Space className="licenses-content" direction="vertical" size="large">
           <Row gutter={[16, 16]}>
             {summaries.map((summary) => (
-              <Col key={summary.key} xs={24} sm={12} xl={8} xxl={4}>
-                <ContentCard>
-                  <Statistic
-                    prefix={<span style={{ color: summary.color }}>{summary.icon}</span>}
-                    title={summary.title}
-                    value={summary.value}
-                    valueStyle={{ color: summary.color }}
-                  />
-                </ContentCard>
+              <Col key={summary.key} xs={24} sm={12} xl={8} xxl={6}>
+                <ActionStatisticCard
+                  active={summary.status === undefined
+                    ? undefined
+                    : summary.status === null
+                      ? !filters.status
+                      : summary.status === filters.status}
+                  ariaLabel={summary.status === null ? 'Tüm lisansları göster' : `${summary.title} filtresini uygula`}
+                  color={summary.color}
+                  icon={summary.icon}
+                  onClick={summary.status === undefined ? undefined : () => selectSummary(summary.status ?? null)}
+                  title={summary.title}
+                  value={summary.value}
+                />
               </Col>
             ))}
           </Row>
@@ -352,7 +384,7 @@ function LicensesPage() {
                 className="app-data-table"
                 columns={columns}
                 dataSource={filteredLicenses}
-                locale={{ emptyText: <EmptyState description="Filtrelere uygun lisans bulunamadı." /> }}
+                locale={{ emptyText: <EmptyState description={emptyDescription} /> }}
                 onChange={handlePaginationChange}
                 pagination={{
                   current: pagination.current,

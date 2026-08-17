@@ -11,6 +11,8 @@ public sealed record LoginRequestDto(
 public sealed record AuthUserDto(
     string Id,
     string? EmployeeId,
+    string FullName,
+    string? Department,
     string Username,
     string Email,
     string Role,

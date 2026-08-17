@@ -20,10 +20,61 @@ public sealed record StockTransactionResult(
     StockTransactionDto? Transaction = null,
     string? ErrorMessage = null);
 
+public enum StockItemUpdateResultStatus
+{
+    Success,
+    StockItemNotFound,
+    InvalidMinimumQuantity
+}
+
+public sealed record StockItemUpdateResult(
+    StockItemUpdateResultStatus Status,
+    StockItemDto? StockItem = null,
+    string? ErrorMessage = null);
+
 public sealed class StockService(
     ApplicationDbContext dbContext,
     NotificationService notificationService)
 {
+    public async Task<StockItemUpdateResult> UpdateMinimumQuantityAsync(
+        string stockItemId,
+        int minimumQuantity,
+        CancellationToken cancellationToken)
+    {
+        if (minimumQuantity < 0)
+        {
+            return new(
+                StockItemUpdateResultStatus.InvalidMinimumQuantity,
+                ErrorMessage: "Minimum stok miktarı negatif olamaz.");
+        }
+
+        var stockItem = await dbContext.StockItems
+            .FirstOrDefaultAsync(item => item.Id == stockItemId, cancellationToken);
+        if (stockItem is null)
+        {
+            return new(
+                StockItemUpdateResultStatus.StockItemNotFound,
+                ErrorMessage: "Stok ürünü bulunamadı.");
+        }
+
+        stockItem.MinimumQuantity = minimumQuantity;
+        var stockAlert = await notificationService.SyncStockAlertAsync(
+            stockItem,
+            cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        if (stockAlert is not null)
+        {
+            await notificationService.DeliverStockAlertAsync(
+                stockAlert,
+                stockItem,
+                cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return new(StockItemUpdateResultStatus.Success, ToDto(stockItem));
+    }
+
     public async Task<StockTransactionResult> CreateTransactionAsync(
         string stockItemId,
         StockTransactionCreateDto request,
@@ -125,6 +176,20 @@ public sealed class StockService(
             transaction.RecipientEmployeeId,
             transaction.RecipientEmployee?.FullName,
             transaction.Note);
+
+    public static StockItemDto ToDto(StockItem item) =>
+        new(
+            item.Id,
+            item.ItemCode,
+            item.Name,
+            item.Category,
+            item.BrandModel,
+            item.Unit,
+            item.CurrentQuantity,
+            item.MinimumQuantity,
+            item.Location,
+            item.IsActive,
+            item.CurrentQuantity <= item.MinimumQuantity);
 
     private static bool TryParseTransactionType(
         string value,

@@ -32,12 +32,21 @@ public sealed class UserService(
             .Select(user => new UserDto(
                 user.Id,
                 user.EmployeeId,
-                user.Employee == null ? null : user.Employee.FullName,
+                user.Employee == null || user.Employee.FullName.Trim() == ""
+                    ? user.Username
+                    : user.Employee.FullName,
+                user.Employee == null || user.Employee.Department.Trim() == ""
+                    ? null
+                    : user.Employee.Department,
+                user.Employee == null || user.Employee.EmployeeNo.Trim() == ""
+                    ? null
+                    : user.Employee.EmployeeNo,
                 user.Username,
                 user.Email,
                 user.Role.ToString(),
                 GetRoleDisplayName(user.Role),
-                user.IsActive))
+                user.IsActive,
+                user.IsActive ? "Aktif" : "Pasif"))
             .ToListAsync(cancellationToken);
 
     public async Task<UserOperationResult> CreateAsync(
@@ -129,16 +138,19 @@ public sealed class UserService(
     private static UserDto ToDto(AppUser user) => new(
         user.Id,
         user.EmployeeId,
-        user.Employee?.FullName,
+        DisplayName(user.Employee?.FullName, user.Username),
+        Clean(user.Employee?.Department),
+        Clean(user.Employee?.EmployeeNo),
         user.Username,
         user.Email,
         user.Role.ToString(),
         GetRoleDisplayName(user.Role),
-        user.IsActive);
+        user.IsActive,
+        user.IsActive ? "Aktif" : "Pasif");
 
     private static string GetRoleDisplayName(AppRole role) => role switch
     {
-        AppRole.Admin => "Sistem Yöneticisi",
+        AppRole.Admin => "Yönetici",
         AppRole.IT => "IT Yetkilisi",
         AppRole.Employee => "Çalışan",
         _ => role.ToString()
@@ -146,6 +158,9 @@ public sealed class UserService(
 
     private static string? Clean(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string DisplayName(string? fullName, string username) =>
+        string.IsNullOrWhiteSpace(fullName) ? username : fullName.Trim();
 
     private static bool IsUniqueViolation(DbUpdateException exception) =>
         exception.InnerException is SqlException { Number: 2601 or 2627 };

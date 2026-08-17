@@ -16,7 +16,6 @@ const mapUser = (value: unknown): ManagedUser => {
     !isRecord(value) ||
     typeof value.id !== 'string' ||
     (value.employeeId !== null && typeof value.employeeId !== 'string') ||
-    (value.employeeName !== null && typeof value.employeeName !== 'string') ||
     typeof value.username !== 'string' ||
     typeof value.email !== 'string' ||
     !isRole(value.role) ||
@@ -26,15 +25,35 @@ const mapUser = (value: unknown): ManagedUser => {
     throw new Error('API geçersiz bir kullanıcı kaydı döndürdü.')
   }
 
+
+  const fullName = typeof value.fullName === 'string' && value.fullName.trim().length > 0
+    ? value.fullName.trim()
+    : null
+  const department = typeof value.department === 'string' && value.department.trim().length > 0
+    ? value.department.trim()
+    : null
+
+  if (value.employeeId !== null && (fullName === null || department === null)) {
+    throw new Error('API çalışan adı veya birim bilgisi eksik bir kullanıcı kaydı döndürdü.')
+  }
+
   return {
     id: value.id,
     employeeId: value.employeeId,
-    employeeName: value.employeeName,
+    fullName: fullName ?? value.username,
+    department,
+    employeeNo:
+      typeof value.employeeNo === 'string' && value.employeeNo.trim().length > 0
+        ? value.employeeNo.trim()
+        : null,
     username: value.username,
     email: value.email,
     role: value.role,
     roleDisplayName: value.roleDisplayName,
     isActive: value.isActive,
+    status: value.status === 'Aktif' || value.status === 'Pasif'
+      ? value.status
+      : value.isActive ? 'Aktif' : 'Pasif',
   }
 }
 

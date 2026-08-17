@@ -1,8 +1,9 @@
 import { DatabaseOutlined, DesktopOutlined, FileProtectOutlined, LaptopOutlined, SafetyCertificateOutlined, SolutionOutlined, ToolOutlined, WarningOutlined } from '@ant-design/icons'
-import { Col, Flex, List, Row, Statistic, Typography } from 'antd'
+import { Col, Flex, List, Row, Typography } from 'antd'
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useState } from 'react'
-import { ContentCard, EmptyState, ErrorState, LoadingState, PageHeader, StatusTag } from '../../components'
+import { useNavigate } from 'react-router-dom'
+import { ActionStatisticCard, ContentCard, EmptyState, ErrorState, LoadingState, PageHeader, StatusTag } from '../../components'
 import { useAuth } from '../../contexts/useAuth'
 import { dashboardService } from '../../services/dashboardService'
 import type { DashboardSummary, DashboardSummaryKey, EmployeeDashboardSummary } from '../../types/dashboard'
@@ -19,12 +20,24 @@ const summaryPresentations: Record<DashboardSummaryKey, SummaryPresentation> = {
   expiringLicenses: { color: '#531dab', icon: <FileProtectOutlined />, title: 'Yaklaşan Lisanslar' },
   criticalStockItems: { color: '#cf1322', icon: <WarningOutlined />, title: 'Kritik Stok' },
   overdueMaintenanceTasks: { color: '#a8071a', icon: <LaptopOutlined />, title: 'Geciken Bakımlar' },
-  openMaintenanceRequests: { color: '#c41d7f', icon: <ToolOutlined />, title: 'Açık Bakım Talepleri' },
+  openMaintenanceRequests: { color: '#c41d7f', icon: <ToolOutlined />, title: 'Açık Teknik Destek' },
 }
 const summaryKeys = Object.keys(summaryPresentations) as DashboardSummaryKey[]
+const summaryRoutes: Record<DashboardSummaryKey, string> = {
+  totalAssets: '/assets',
+  inStockAssets: '/assets',
+  assignedAssets: '/assignments',
+  maintenanceAssets: '/assets',
+  expiringWarranties: '/warranties/expiring',
+  expiringLicenses: '/licenses/expiring',
+  criticalStockItems: '/stock/critical',
+  overdueMaintenanceTasks: '/maintenance?view=overdue',
+  openMaintenanceRequests: '/support-requests',
+}
 const dateTimeOptions: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }
 
 function CompanyDashboard() {
+  const navigate = useNavigate()
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -42,7 +55,23 @@ function CompanyDashboard() {
 
   return <section className="dashboard-page">
     <PageHeader title="Dashboard" description="Donanım, stok, garanti, lisans ve bakım süreçlerinin güncel özeti." actions={<Typography.Text type="secondary">Son güncelleme: {formatDate(summary.generatedAt, dateTimeOptions)}</Typography.Text>} />
-    <Row className="dashboard-summary-grid" gutter={[16, 16]}>{summaryKeys.map((key) => { const item = summaryPresentations[key]; return <Col key={key} xs={24} sm={12} xl={6}><ContentCard><Statistic prefix={<span style={{ color: item.color }}>{item.icon}</span>} title={item.title} value={summary[key]} valueStyle={{ color: item.color }} /></ContentCard></Col> })}</Row>
+    <Row className="dashboard-summary-grid" gutter={[16, 16]}>
+      {summaryKeys.map((key) => {
+        const item = summaryPresentations[key]
+        return (
+          <Col key={key} xs={24} sm={12} xl={6}>
+            <ActionStatisticCard
+              ariaLabel={`${item.title} sayfasını aç`}
+              color={item.color}
+              icon={item.icon}
+              onClick={() => void navigate(summaryRoutes[key])}
+              title={item.title}
+              value={summary[key]}
+            />
+          </Col>
+        )
+      })}
+    </Row>
     <Row className="dashboard-detail-grid" gutter={[16, 16]}>
       <Col xs={24} xl={12}><ContentCard title="Son Cihaz / Zimmet Hareketleri"><List dataSource={summary.recentMovements} locale={{ emptyText: 'Hareket bulunamadı.' }} renderItem={(item) => <List.Item className="dashboard-list-item"><div className="dashboard-list-main"><Flex align="center" gap={8} justify="space-between" wrap="wrap"><Typography.Text strong>{item.assetName}</Typography.Text><StatusTag status={item.status} /></Flex><Typography.Text className="dashboard-item-code" type="secondary">{item.assetCode}</Typography.Text><Typography.Text>{item.description}</Typography.Text></div><Typography.Text className="dashboard-item-date" type="secondary">{formatDate(item.occurredAt, dateTimeOptions)}</Typography.Text></List.Item>} /></ContentCard></Col>
       <Col xs={24} xl={12}><ContentCard title="Yaklaşan Garantiler"><List dataSource={summary.upcomingWarranties} locale={{ emptyText: '30 gün içinde bitecek garanti bulunmuyor.' }} renderItem={(item) => <List.Item className="dashboard-list-item"><div className="dashboard-list-main"><Flex align="center" gap={8} justify="space-between" wrap="wrap"><Typography.Text strong>{item.assetName}</Typography.Text><StatusTag status={item.status} /></Flex><Typography.Text className="dashboard-item-code" type="secondary">{item.assetCode}</Typography.Text><Typography.Text type="secondary">Garanti bitişi: {formatDate(item.warrantyEndDate)}</Typography.Text></div><Typography.Text className="dashboard-item-countdown">{item.remainingDays} gün kaldı</Typography.Text></List.Item>} /></ContentCard></Col>
@@ -53,6 +82,7 @@ function CompanyDashboard() {
 }
 
 function EmployeeDashboard() {
+  const navigate = useNavigate()
   const [summary, setSummary] = useState<EmployeeDashboardSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -70,10 +100,18 @@ function EmployeeDashboard() {
   return <section className="dashboard-page">
     <PageHeader title="Dashboard" description="Zimmetli cihazlarınız ve teknik destek talepleriniz." />
     <Row className="dashboard-summary-grid" gutter={[16, 16]}>
-      <Col xs={24} sm={12} xl={6}><ContentCard><Statistic title="Zimmetli Cihazlarım" value={summary.activeAssignmentCount} /></ContentCard></Col>
-      <Col xs={24} sm={12} xl={6}><ContentCard><Statistic title="Açık Destek Talebim" value={summary.openSupportRequestCount} /></ContentCard></Col>
-      <Col xs={24} sm={12} xl={6}><ContentCard><Statistic title="İşlemdeki Talebim" value={summary.inProgressSupportRequestCount} /></ContentCard></Col>
-      <Col xs={24} sm={12} xl={6}><ContentCard><Statistic title="Yaklaşan Garanti" value={warranty.expiringSoon} /></ContentCard></Col>
+      <Col xs={24} sm={12} xl={6}>
+        <ActionStatisticCard onClick={() => void navigate('/assignments/mine')} title="Zimmetli Cihazlarım" value={summary.activeAssignmentCount} />
+      </Col>
+      <Col xs={24} sm={12} xl={6}>
+        <ActionStatisticCard onClick={() => void navigate('/support-requests?view=open')} title="Açık Destek Talebim" value={summary.openSupportRequestCount} />
+      </Col>
+      <Col xs={24} sm={12} xl={6}>
+        <ActionStatisticCard onClick={() => void navigate('/support-requests?view=in-progress')} title="İşlemdeki Talebim" value={summary.inProgressSupportRequestCount} />
+      </Col>
+      <Col xs={24} sm={12} xl={6}>
+        <ActionStatisticCard title="Yaklaşan Garanti" value={warranty.expiringSoon} />
+      </Col>
     </Row>
     <Row gutter={[16, 16]}>
       <Col xs={24} xl={12}><ContentCard title="Cihazlarım"><List dataSource={summary.myAssets} locale={{ emptyText: 'Aktif zimmetli cihazınız bulunmuyor.' }} renderItem={(item) => <List.Item><div><Typography.Text strong>{item.assetCode} · {item.assetName}</Typography.Text><br /><Typography.Text type="secondary">{item.category} · Zimmet: {formatDate(item.assignedAt)}</Typography.Text></div></List.Item>} /></ContentCard></Col>

@@ -13,6 +13,7 @@ export interface StockService {
   getStockItems: () => Promise<StockItem[]>
   getStockItemById: (id: string) => Promise<StockItem | undefined>
   createStockItem: (stockItem: StockItemInput) => Promise<StockItem>
+  updateMinimumQuantity: (stockItemId: string, minimumQuantity: number) => Promise<StockItem>
   createStockTransaction: (
     stockItemId: string,
     transaction: StockTransactionInput,
@@ -209,6 +210,18 @@ export const stockService: StockService = {
       return mapStockItemResponse(response.data)
     } catch (error: unknown) {
       throw new Error(getApiErrorMessage(error, 'Stok ürünü kaydedilemedi.'))
+    }
+  },
+
+  updateMinimumQuantity: async (stockItemId, minimumQuantity) => {
+    try {
+      const response = await apiClient.put<unknown>(
+        `/api/stock-items/${encodeURIComponent(stockItemId)}/minimum-quantity`,
+        { minimumQuantity },
+      )
+      return mapStockItemResponse(response.data)
+    } catch (error: unknown) {
+      throw new Error(getApiErrorMessage(error, 'Minimum stok miktarı güncellenemedi.'))
     }
   },
 

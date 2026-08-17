@@ -1,5 +1,7 @@
 export { default as AssetForm } from './AssetForm/AssetForm'
 export type { AssetFormProps } from './AssetForm/AssetForm'
+export { default as ActionStatisticCard } from './ActionStatisticCard/ActionStatisticCard'
+export type { ActionStatisticCardProps } from './ActionStatisticCard/ActionStatisticCard'
 export { default as ContentCard } from './ContentCard/ContentCard'
 export type { ContentCardProps } from './ContentCard/ContentCard'
 export { default as EmptyState } from './EmptyState/EmptyState'

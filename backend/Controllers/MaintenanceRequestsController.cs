@@ -8,7 +8,7 @@ using TakipProgrami.Api.Helpers;
 
 namespace TakipProgrami.Api.Controllers;
 
-[ApiController, Authorize, Route("api/support-requests"), Route("api/maintenance/requests")]
+[ApiController, Authorize, Route("api/support-requests")]
 public sealed class MaintenanceRequestsController(ApplicationDbContext db) : ControllerBase
 {
     [HttpGet, Authorize(Roles = "Admin,IT")]

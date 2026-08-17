@@ -113,7 +113,6 @@ const getSelectedKey = (path: string, role: UserRole): string => {
     '/admin/audit-logs',
   ]
 
-  if (path === '/my-assignments') return '/assignments/mine'
   if (exactPaths.includes(path)) return path
   if (path.startsWith('/assets/')) return '/assets'
   if (path.startsWith('/assignments/')) {
@@ -185,8 +184,10 @@ function MainLayout() {
           {user && (
             <div className="header-user">
               <div className="header-user-details">
-                <Typography.Text strong>{user.username}</Typography.Text>
-                <Typography.Text type="secondary">{user.roleDisplayName}</Typography.Text>
+                <Typography.Text strong>{user.fullName}</Typography.Text>
+                {user.department && (
+                  <Typography.Text type="secondary">{user.department}</Typography.Text>
+                )}
               </div>
               <Button icon={<LogoutOutlined />} onClick={handleLogout}>
                 Çıkış Yap

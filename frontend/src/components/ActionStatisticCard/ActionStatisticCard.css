@@ -1,0 +1,25 @@
+.action-statistic-card {
+  height: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.action-statistic-card--active {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgb(22 119 255 / 12%);
+}
+
+.action-statistic-card__button {
+  width: 100%;
+  padding: 0;
+  color: inherit;
+  text-align: start;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.action-statistic-card__button:focus-visible {
+  outline: 2px solid #1677ff;
+  outline-offset: 6px;
+  border-radius: 2px;
+}

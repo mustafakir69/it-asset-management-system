@@ -29,6 +29,7 @@ public sealed class AuthController(
     {
         var identifier = request.Identifier.Trim();
         var user = await dbContext.AppUsers
+            .Include(current => current.Employee)
             .FirstOrDefaultAsync(
                 current => current.Username == identifier || current.Email == identifier,
                 cancellationToken);
@@ -77,6 +78,7 @@ public sealed class AuthController(
 
         var user = await dbContext.AppUsers
             .AsNoTracking()
+            .Include(current => current.Employee)
             .FirstOrDefaultAsync(current => current.Id == userId, cancellationToken);
 
         if (user is null) return Unauthorized();
@@ -88,6 +90,8 @@ public sealed class AuthController(
     private static AuthUserDto ToDto(AppUser user) => new(
         user.Id,
         user.EmployeeId,
+        DisplayName(user.Employee?.FullName, user.Username),
+        Clean(user.Employee?.Department),
         user.Username,
         user.Email,
         user.Role.ToString(),
@@ -95,9 +99,15 @@ public sealed class AuthController(
 
     private static string GetRoleDisplayName(AppRole role) => role switch
     {
-        AppRole.Admin => "Sistem Yöneticisi",
+        AppRole.Admin => "Yönetici",
         AppRole.IT => "IT Yetkilisi",
         AppRole.Employee => "Çalışan",
         _ => role.ToString()
     };
+
+    private static string DisplayName(string? fullName, string username) =>
+        string.IsNullOrWhiteSpace(fullName) ? username : fullName.Trim();
+
+    private static string? Clean(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

@@ -24,9 +24,22 @@ const parseAuthUser = (value: unknown): AuthUser => {
     throw new Error('Sunucudan geçersiz kullanıcı bilgisi alındı.')
   }
 
+  const fullName = typeof value.fullName === 'string' && value.fullName.trim().length > 0
+    ? value.fullName.trim()
+    : null
+  const department = typeof value.department === 'string' && value.department.trim().length > 0
+    ? value.department.trim()
+    : null
+
+  if (value.employeeId !== null && (fullName === null || department === null)) {
+    throw new Error('Sunucudan çalışan adı veya birim bilgisi alınamadı.')
+  }
+
   return {
     id: value.id,
     employeeId: value.employeeId,
+    fullName: fullName ?? value.username,
+    department,
     username: value.username,
     email: value.email,
     role: value.role,

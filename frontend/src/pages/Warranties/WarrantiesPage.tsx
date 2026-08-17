@@ -16,7 +16,6 @@ import {
   Row,
   Select,
   Space,
-  Statistic,
   Table,
   Tag,
   Tooltip,
@@ -26,7 +25,14 @@ import type { MenuProps, TableColumnsType, TablePaginationConfig } from 'antd'
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ContentCard, EmptyState, ErrorState, LoadingState, PageHeader } from '../../components'
+import {
+  ActionStatisticCard,
+  ContentCard,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PageHeader,
+} from '../../components'
 import { warrantyService } from '../../services/warrantyService'
 import {
   warrantyStatuses,
@@ -162,6 +168,14 @@ function WarrantiesPage() {
     setPagination((current) => ({ ...current, current: 1 }))
   }
 
+  const selectSummary = (status: WarrantyStatus) => {
+    updateFilters({ status: filters.status === status ? undefined : status })
+  }
+
+  const emptyDescription = filters.status
+    ? `Bu filtreye uygun “${filters.status}” garanti kaydı bulunmuyor.`
+    : 'Arama ölçütlerine uygun garanti kaydı bulunmuyor.'
+
   const handlePaginationChange = (nextPagination: TablePaginationConfig) => {
     setPagination({
       current: nextPagination.current ?? 1,
@@ -290,16 +304,15 @@ function WarrantiesPage() {
               const presentation = statusPresentations[status]
               return (
                 <Col key={status} xs={24} sm={12} xl={6}>
-                  <ContentCard>
-                    <Statistic
-                      prefix={<span style={{ color: presentation.color }}>{presentation.icon}</span>}
-                      title={title}
-                      value={summaryCounts[status]}
-                      valueStyle={{
-                        color: presentation.color === 'default' ? undefined : presentation.color,
-                      }}
-                    />
-                  </ContentCard>
+                  <ActionStatisticCard
+                    active={filters.status === status}
+                    ariaLabel={`${title} filtresini ${filters.status === status ? 'kaldır' : 'uygula'}`}
+                    color={presentation.color === 'default' ? undefined : presentation.color}
+                    icon={presentation.icon}
+                    onClick={() => selectSummary(status)}
+                    title={title}
+                    value={summaryCounts[status]}
+                  />
                 </Col>
               )
             })}
@@ -344,7 +357,7 @@ function WarrantiesPage() {
                 columns={columns}
                 dataSource={filteredWarranties}
                 locale={{
-                  emptyText: <EmptyState description="Filtrelere uygun garanti kaydı bulunamadı." />,
+                  emptyText: <EmptyState description={emptyDescription} />,
                 }}
                 onChange={handlePaginationChange}
                 pagination={{

@@ -1,4 +1,4 @@
-import { ArrowLeftOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, EditOutlined } from '@ant-design/icons'
 import { Button, Descriptions, Space, Table, Tag } from 'antd'
 import type { DescriptionsProps, TableColumnsType } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
@@ -7,6 +7,7 @@ import { ContentCard, EmptyState, ErrorState, LoadingState, PageHeader } from '.
 import { stockService } from '../../services/stockService'
 import type { StockItem, StockTransaction } from '../../types/stockItem'
 import { formatDate } from '../../utils'
+import MinimumStockModal from './MinimumStockModal'
 
 function StockItemDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -15,6 +16,7 @@ function StockItemDetailPage() {
   const [transactions, setTransactions] = useState<StockTransaction[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [isMinimumModalOpen, setIsMinimumModalOpen] = useState(false)
 
   const loadStockItem = useCallback(async () => {
     if (!id) {
@@ -47,6 +49,11 @@ function StockItemDetailPage() {
   useEffect(() => {
     void loadStockItem()
   }, [loadStockItem])
+
+  const openMinimumModal = () => {
+    if (!stockItem) return
+    setIsMinimumModalOpen(true)
+  }
 
   const descriptionItems: DescriptionsProps['items'] = stockItem
     ? [
@@ -98,11 +105,18 @@ function StockItemDetailPage() {
       <PageHeader
         title={stockItem ? stockItem.itemCode : 'Stok Ürünü Detayı'}
         description={stockItem ? stockItem.name : 'Stok ürünü ve hareket geçmişi.'}
-        actions={
-          <Button icon={<ArrowLeftOutlined />} onClick={() => void navigate('/stock')}>
-            Stok Listesine Dön
-          </Button>
-        }
+        actions={(
+          <Space wrap>
+            {stockItem && (
+              <Button icon={<EditOutlined />} onClick={openMinimumModal} type="primary">
+                Minimum Stoku Düzenle
+              </Button>
+            )}
+            <Button icon={<ArrowLeftOutlined />} onClick={() => void navigate('/stock')}>
+              Stok Listesine Dön
+            </Button>
+          </Space>
+        )}
       />
 
       {isLoading ? (
@@ -138,6 +152,16 @@ function StockItemDetailPage() {
           </ContentCard>
         </Space>
       ) : null}
+
+      <MinimumStockModal
+        onCancel={() => setIsMinimumModalOpen(false)}
+        onSuccess={(updated) => {
+          setStockItem(updated)
+          setIsMinimumModalOpen(false)
+        }}
+        open={isMinimumModalOpen}
+        stockItem={stockItem}
+      />
     </section>
   )
 }

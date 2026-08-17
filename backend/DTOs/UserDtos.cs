@@ -5,12 +5,15 @@ namespace TakipProgrami.Api.DTOs;
 public sealed record UserDto(
     string Id,
     string? EmployeeId,
-    string? EmployeeName,
+    string FullName,
+    string? Department,
+    string? EmployeeNo,
     string Username,
     string Email,
     string Role,
     string RoleDisplayName,
-    bool IsActive);
+    bool IsActive,
+    string Status);
 
 public sealed class UserCreateDto
 {

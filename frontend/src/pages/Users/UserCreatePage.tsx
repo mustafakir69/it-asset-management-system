@@ -20,7 +20,7 @@ interface UserFormValues {
 }
 
 const roleOptions: Array<{ label: string; value: UserRole }> = [
-  { label: 'Sistem Yöneticisi', value: 'Admin' },
+  { label: 'Yönetici', value: 'Admin' },
   { label: 'IT Yetkilisi', value: 'IT' },
   { label: 'Çalışan', value: 'Employee' },
 ]

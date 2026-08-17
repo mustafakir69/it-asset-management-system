@@ -57,7 +57,7 @@ function MaintenanceTaskDetailPage() {
 
   return (
     <section>
-      <PageHeader title={task?.title ?? 'Bakım Görevi Detayı'} description={task ? `${task.assetCode} — ${task.assetName}` : 'Bakım görevinin temel bilgileri.'} actions={<Space wrap><Button icon={<ArrowLeftOutlined />} onClick={() => void navigate('/maintenance/tasks')}>Bakım Görevlerine Dön</Button>{task && <MaintenanceTaskActions mode="buttons" onSuccess={() => void loadTask()} task={task} />}</Space>} />
+      <PageHeader title={task?.title ?? 'Bakım Görevi Detayı'} description={task ? `${task.assetCode} — ${task.assetName}` : 'Bakım görevinin temel bilgileri.'} actions={<Space wrap><Button icon={<ArrowLeftOutlined />} onClick={() => void navigate('/maintenance')}>Periyodik Bakıma Dön</Button>{task && <MaintenanceTaskActions mode="buttons" onSuccess={() => void loadTask()} task={task} />}</Space>} />
       <ContentCard title="Görev Bilgileri">
         {isLoading ? <LoadingState message="Bakım görevi yükleniyor..." /> : loadError ? <ErrorState message={loadError} onRetry={() => void loadTask()} /> : task ? <Descriptions bordered column={{ xs: 1, sm: 1, md: 2 }} items={items} size="middle" /> : null}
       </ContentCard>

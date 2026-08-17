@@ -12,7 +12,6 @@ import AssetCreatePage from '../pages/Assets/AssetCreatePage'
 import AssetDetailPage from '../pages/Assets/AssetDetailPage'
 import AssetEditPage from '../pages/Assets/AssetEditPage'
 import AssetsPage from '../pages/Assets/AssetsPage'
-import LegacyAssetRedirect from '../pages/Assets/LegacyAssetRedirect'
 import AuditLogsPage from '../pages/AuditLogs/AuditLogsPage'
 import DashboardPage from '../pages/Dashboard/DashboardPage'
 import LicenseCreatePage from '../pages/Licenses/LicenseCreatePage'
@@ -58,15 +57,12 @@ export const router = createBrowserRouter([
       { path: 'assets/new', element: operation(<AssetCreatePage />) },
       { path: 'assets/:id/edit', element: operation(<AssetEditPage />) },
       { path: 'assets/:id', element: operation(<AssetDetailPage />) },
-      { path: 'inventory', element: <Navigate to="/assets" replace /> },
-      { path: 'inventory/:deviceId', element: operation(<LegacyAssetRedirect />) },
       { path: 'assignments', element: operation(<AssignmentsPage />) },
       { path: 'assignments/new', element: operation(<AssignmentCreatePage />) },
       { path: 'assignments/returns', element: operation(<AssignmentReturnsPage />) },
       { path: 'assignments/history', element: operation(<AssignmentHistoryPage />) },
       { path: 'assignments/mine', element: <RoleRoute allowedRoles={['Employee']}><MyAssignmentsPage /></RoleRoute> },
       { path: 'assignments/:id', element: <AssignmentDetailPage /> },
-      { path: 'my-assignments', element: <RoleRoute allowedRoles={['Employee']}><MyAssignmentsPage /></RoleRoute> },
       { path: 'stock', element: operation(<StockItemsPage />) },
       { path: 'stock/new', element: operation(<StockItemCreatePage />) },
       { path: 'stock/transactions', element: operation(<StockTransactionsPage />) },
@@ -82,12 +78,6 @@ export const router = createBrowserRouter([
       { path: 'maintenance', element: operation(<MaintenancePage />) },
       { path: 'maintenance/plans/new', element: operation(<MaintenancePlanCreatePage />) },
       { path: 'maintenance/tasks/:taskId', element: operation(<MaintenanceTaskDetailPage />) },
-      { path: 'maintenance/plans', element: <Navigate to="/maintenance" replace /> },
-      { path: 'maintenance/tasks', element: <Navigate to="/maintenance" replace /> },
-      { path: 'maintenance/history', element: <Navigate to="/maintenance" replace /> },
-      { path: 'maintenance/requests', element: <Navigate to="/support-requests" replace /> },
-      { path: 'maintenance/requests/new', element: <Navigate to="/support-requests/new" replace /> },
-      { path: 'maintenance/requests/:id', element: <MaintenanceRequestDetailPage /> },
       { path: 'support-requests', element: <MaintenanceRequestsPage /> },
       { path: 'support-requests/new', element: <RoleRoute allowedRoles={['Employee']}><MaintenanceRequestCreatePage /></RoleRoute> },
       { path: 'support-requests/:id', element: <MaintenanceRequestDetailPage /> },

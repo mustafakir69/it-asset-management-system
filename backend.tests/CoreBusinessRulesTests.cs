@@ -17,6 +17,113 @@ namespace TakipProgrami.Api.Tests;
 public sealed class CoreBusinessRulesTests
 {
     [Fact]
+    public async Task AuthMe_ReturnsEmployeeFullNameAndBootstrapUsernameFallback()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext();
+        var employee = Employee("auth-employee");
+        employee.FullName = "Kerem Tunç";
+        employee.Department = "Bilgi İşlem";
+        var employeeUser = User("auth-it", AppRole.IT);
+        employeeUser.EmployeeId = employee.Id;
+        var bootstrapAdmin = User("bootstrap-admin", AppRole.Admin);
+        dbContext.AddRange(employee, employeeUser, bootstrapAdmin);
+        await dbContext.SaveChangesAsync();
+
+        var jwtTokenService = new JwtTokenService(Options.Create(new JwtOptions
+        {
+            Key = "test-only-key-with-at-least-32-characters-123456",
+            Issuer = "tests",
+            Audience = "tests",
+            ExpirationMinutes = 10
+        }));
+
+        var employeeController = WithUser(
+            new AuthController(dbContext, new PasswordHasher<AppUser>(), jwtTokenService),
+            employeeUser.Id,
+            employeeUser.Role,
+            employee.Id);
+        var employeeResult = await employeeController.GetMe(CancellationToken.None);
+        var employeeDto = Assert.IsType<AuthUserDto>(
+            Assert.IsType<OkObjectResult>(employeeResult.Result).Value);
+        Assert.Equal(employee.FullName, employeeDto.FullName);
+        Assert.Equal(employee.Department, employeeDto.Department);
+
+        var adminController = WithUser(
+            new AuthController(dbContext, new PasswordHasher<AppUser>(), jwtTokenService),
+            bootstrapAdmin.Id,
+            bootstrapAdmin.Role);
+        var adminResult = await adminController.GetMe(CancellationToken.None);
+        var adminDto = Assert.IsType<AuthUserDto>(
+            Assert.IsType<OkObjectResult>(adminResult.Result).Value);
+        Assert.Equal(bootstrapAdmin.Username, adminDto.FullName);
+        Assert.Null(adminDto.Department);
+        Assert.Equal("Yönetici", adminDto.RoleDisplayName);
+    }
+
+    [Fact]
+    public async Task StockMinimumQuantityUpdate_RecalculatesCriticalStateAndAlert()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext();
+        var item = StockItem("minimum-stock", 5, 1);
+        dbContext.StockItems.Add(item);
+        await dbContext.SaveChangesAsync();
+        var service = new StockService(
+            dbContext,
+            TestInfrastructure.CreateNotificationService(dbContext));
+
+        var critical = await service.UpdateMinimumQuantityAsync(
+            item.Id,
+            5,
+            CancellationToken.None);
+
+        Assert.Equal(StockItemUpdateResultStatus.Success, critical.Status);
+        Assert.True(critical.StockItem!.IsCritical);
+        Assert.Equal(5, item.MinimumQuantity);
+        Assert.Single(dbContext.StockAlerts.Where(alert => alert.ResolvedAt == null));
+
+        var normal = await service.UpdateMinimumQuantityAsync(
+            item.Id,
+            0,
+            CancellationToken.None);
+
+        Assert.Equal(StockItemUpdateResultStatus.Success, normal.Status);
+        Assert.False(normal.StockItem!.IsCritical);
+        Assert.Empty(dbContext.StockAlerts.Where(alert => alert.ResolvedAt == null));
+    }
+
+    [Fact]
+    public async Task UserService_ReturnsEmployeeContextAndBootstrapFallback()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext();
+        var employee = Employee("users-page-employee");
+        employee.FullName = "Deniz Aydın";
+        employee.Department = "Operasyon";
+        var employeeUser = User("users-page-user", AppRole.Employee);
+        employeeUser.EmployeeId = employee.Id;
+        var bootstrapAdmin = User("users-page-admin", AppRole.Admin);
+        dbContext.AddRange(employee, employeeUser, bootstrapAdmin);
+        await dbContext.SaveChangesAsync();
+
+        var users = await new UserService(dbContext, new PasswordHasher<AppUser>())
+            .GetUsersAsync(CancellationToken.None);
+
+        var employeeDto = Assert.Single(users, user => user.Id == employeeUser.Id);
+        Assert.Equal(employee.FullName, employeeDto.FullName);
+        Assert.Equal(employee.Department, employeeDto.Department);
+        Assert.Equal(employee.EmployeeNo, employeeDto.EmployeeNo);
+        Assert.Equal(employeeUser.Username, employeeDto.Username);
+        Assert.Equal(employeeUser.Email, employeeDto.Email);
+        Assert.Equal("Çalışan", employeeDto.RoleDisplayName);
+        Assert.Equal("Aktif", employeeDto.Status);
+
+        var adminDto = Assert.Single(users, user => user.Id == bootstrapAdmin.Id);
+        Assert.Equal(bootstrapAdmin.Username, adminDto.FullName);
+        Assert.Null(adminDto.Department);
+        Assert.Null(adminDto.EmployeeNo);
+        Assert.Equal("Yönetici", adminDto.RoleDisplayName);
+    }
+
+    [Fact]
     public async Task AssignmentActors_AreTakenFromCurrentUser()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext();
