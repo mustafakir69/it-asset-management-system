@@ -11,7 +11,7 @@ using TakipProgrami.Api.Services;
 namespace TakipProgrami.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = "Admin,IT")]
 [Route("api/stock-items")]
 public sealed class StockItemsController(
     ApplicationDbContext dbContext,
@@ -115,7 +115,9 @@ public sealed class StockItemsController(
         StockTransactionCreateDto request,
         CancellationToken cancellationToken)
     {
-        var result = await stockService.CreateTransactionAsync(id, request, cancellationToken);
+        var userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await stockService.CreateTransactionAsync(id, request, userId, cancellationToken);
 
         return result.Status switch
         {
@@ -141,6 +143,8 @@ public sealed class StockItemsController(
         }
 
         var transactions = await dbContext.StockTransactions
+            .Include(x => x.PerformedByUser).ThenInclude(x => x.Employee)
+            .Include(x => x.RecipientEmployee)
             .AsNoTracking()
             .Where(transaction => transaction.StockItemId == id)
             .OrderByDescending(transaction => transaction.TransactionDate)

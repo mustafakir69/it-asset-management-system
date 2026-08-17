@@ -32,7 +32,7 @@ public sealed class ReportsService(ApplicationDbContext dbContext)
         DateTimeOffset? to,
         CancellationToken cancellationToken)
     {
-        var query = dbContext.Assignments.AsNoTracking().Include(item => item.Asset).Include(item => item.Employee).AsQueryable();
+        var query = dbContext.Assignments.AsNoTracking().Include(item => item.Asset).Include(item => item.Employee).Include(item => item.AssignedByUser).ThenInclude(x => x.Employee).Include(item => item.ReturnedByUser).ThenInclude(x => x!.Employee).AsQueryable();
         if (status?.Trim() == "Aktif") query = query.Where(item => item.ReturnedAt == null);
         if (status?.Trim() == "İade Edildi") query = query.Where(item => item.ReturnedAt != null);
         if (!string.IsNullOrWhiteSpace(department)) query = query.Where(item => item.Employee.Department == department.Trim());
@@ -48,8 +48,8 @@ public sealed class ReportsService(ApplicationDbContext dbContext)
                 item.AssignedAt,
                 item.ReturnedAt,
                 item.ReturnedAt == null ? "Aktif" : "İade Edildi",
-                item.AssignedBy,
-                item.ReturnedBy))
+                item.AssignedByUser.Employee != null ? item.AssignedByUser.Employee.FullName : item.AssignedByUser.Username,
+                item.ReturnedByUser == null ? null : item.ReturnedByUser.Employee != null ? item.ReturnedByUser.Employee.FullName : item.ReturnedByUser.Username))
             .ToListAsync(cancellationToken);
     }
 
@@ -79,7 +79,7 @@ public sealed class ReportsService(ApplicationDbContext dbContext)
 
     public async Task<IReadOnlyList<StockMovementReportDto>> GetStockMovementsAsync(
         CancellationToken cancellationToken) =>
-        await dbContext.StockTransactions.AsNoTracking().Include(item => item.StockItem)
+        await dbContext.StockTransactions.AsNoTracking().Include(item => item.StockItem).Include(item => item.PerformedByUser).ThenInclude(x => x.Employee).Include(item => item.RecipientEmployee)
             .OrderByDescending(item => item.TransactionDate)
             .Select(item => new StockMovementReportDto(
                 item.StockItem.ItemCode,
@@ -87,7 +87,8 @@ public sealed class ReportsService(ApplicationDbContext dbContext)
                 item.TransactionType == StockTransactionType.Entry ? "Giriş" : "Çıkış",
                 item.Quantity,
                 item.TransactionDate,
-                item.PersonName,
+                item.PerformedByUser.Employee != null ? item.PerformedByUser.Employee.FullName : item.PerformedByUser.Username,
+                item.RecipientEmployee == null ? null : item.RecipientEmployee.FullName,
                 item.Note))
             .ToListAsync(cancellationToken);
 
@@ -97,9 +98,9 @@ public sealed class ReportsService(ApplicationDbContext dbContext)
         CancellationToken cancellationToken)
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
-        var tasks = await dbContext.MaintenanceTasks.AsNoTracking().Include(item => item.Asset)
+        var tasks = await dbContext.MaintenanceTasks.AsNoTracking().Include(item => item.Asset).Include(item => item.MaintenancePlan).ThenInclude(x => x.ResponsibleUser).ThenInclude(x => x.Employee).Include(item => item.CompletedByUser).ThenInclude(x => x!.Employee)
             .ToListAsync(cancellationToken);
-        var requests = await dbContext.MaintenanceRequests.AsNoTracking().Include(item => item.Asset)
+        var requests = await dbContext.MaintenanceRequests.AsNoTracking().Include(item => item.Asset).Include(item => item.AssignedToUser).ThenInclude(x => x!.Employee).Include(item => item.CompletedByUser).ThenInclude(x => x!.Employee)
             .ToListAsync(cancellationToken);
 
         var records = tasks.Select(task => new MaintenanceReportDto(
@@ -112,7 +113,7 @@ public sealed class ReportsService(ApplicationDbContext dbContext)
                 task.CompletedDate.HasValue
                     ? new DateTimeOffset(task.CompletedDate.Value.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero)
                     : null,
-                task.CompletedBy ?? task.TechnicianName,
+                task.CompletedByUser == null ? (task.MaintenancePlan.ResponsibleUser.Employee != null ? task.MaintenancePlan.ResponsibleUser.Employee.FullName : task.MaintenancePlan.ResponsibleUser.Username) : task.CompletedByUser.Employee != null ? task.CompletedByUser.Employee.FullName : task.CompletedByUser.Username,
                 task.Result,
                 TaskStatus(task, today)))
             .Concat(requests.Select(request => new MaintenanceReportDto(
@@ -123,7 +124,7 @@ public sealed class ReportsService(ApplicationDbContext dbContext)
                 "Bakım Talebi",
                 null,
                 request.CompletedAt,
-                request.CompletedBy ?? request.AssignedTechnician,
+                request.CompletedByUser == null ? (request.AssignedToUser == null ? null : request.AssignedToUser.Employee != null ? request.AssignedToUser.Employee.FullName : request.AssignedToUser.Username) : request.CompletedByUser.Employee != null ? request.CompletedByUser.Employee.FullName : request.CompletedByUser.Username,
                 request.Result,
                 RequestStatus(request.Status))))
             .OrderByDescending(item => item.CompletedAt ??

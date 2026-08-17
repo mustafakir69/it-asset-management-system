@@ -7,6 +7,27 @@ namespace TakipProgrami.Api.Services;
 
 public sealed class DashboardService(ApplicationDbContext dbContext)
 {
+    public async Task<EmployeeDashboardDto> GetMySummaryAsync(string employeeId, CancellationToken cancellationToken)
+    {
+        var assignments = await dbContext.Assignments.AsNoTracking()
+            .Where(x => x.EmployeeId == employeeId && x.ReturnedAt == null)
+            .Select(x => new { x.AssetId, x.Asset.AssetCode, AssetName = x.Asset.Brand + " " + x.Asset.Model, x.Asset.Category, x.Asset.WarrantyEndDate, x.AssignedAt })
+            .ToListAsync(cancellationToken);
+        var requests = await dbContext.MaintenanceRequests.AsNoTracking().Where(x => x.RequestedByEmployeeId == employeeId)
+            .OrderByDescending(x => x.UpdatedAt).ToListAsync(cancellationToken);
+        var today = DateOnly.FromDateTime(DateTime.Today); var warning = today.AddDays(30);
+        return new EmployeeDashboardDto(assignments.Count,
+            assignments.Select(x => new EmployeeDashboardAssetDto(x.AssetId, x.AssetCode, x.AssetName, x.Category, x.AssignedAt)).ToList(),
+            requests.Count(x => x.Status is MaintenanceRequestStatus.Open or MaintenanceRequestStatus.Assigned),
+            requests.Count(x => x.Status == MaintenanceRequestStatus.InProgress),
+            requests.Take(5).Select(x => new EmployeeDashboardSupportDto(x.Id, $"BT-{x.Id[..Math.Min(8, x.Id.Length)].ToUpperInvariant()}", x.Title, x.Status switch { MaintenanceRequestStatus.Assigned => "Atandı", MaintenanceRequestStatus.InProgress => "İşlemde", MaintenanceRequestStatus.Completed => "Tamamlandı", MaintenanceRequestStatus.Cancelled => "İptal Edildi", _ => "Açık" }, x.UpdatedAt)).ToList(),
+            new EmployeeWarrantySummaryDto(
+                assignments.Count(x => x.WarrantyEndDate > warning),
+                assignments.Count(x => x.WarrantyEndDate >= today && x.WarrantyEndDate <= warning),
+                assignments.Count(x => x.WarrantyEndDate < today),
+                assignments.Count(x => x.WarrantyEndDate == null)));
+    }
+
     public async Task<DashboardSummaryDto> GetSummaryAsync(CancellationToken cancellationToken)
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
@@ -75,8 +96,8 @@ public sealed class DashboardService(ApplicationDbContext dbContext)
                 item.Id,
                 item.AssetCode,
                 item.Brand + " " + item.Model,
-                item.WarrantyEndDate,
-                item.WarrantyEndDate.DayNumber - today.DayNumber,
+                item.WarrantyEndDate!.Value,
+                item.WarrantyEndDate.Value.DayNumber - today.DayNumber,
                 "Yaklaşıyor"))
             .ToListAsync(cancellationToken);
 

@@ -74,7 +74,7 @@ public sealed class ApplicationDbContext(
             .IsUnique()
             .HasDatabaseName("UX_Assets_SerialNumber");
 
-        asset.HasData(
+        IgnoreLegacyDemoData(
             new Asset
             {
                 Id = "asset-db-001",
@@ -412,7 +412,7 @@ public sealed class ApplicationDbContext(
         employee.Property(item => item.Id).HasMaxLength(64);
         employee.Property(item => item.EmployeeNo).HasMaxLength(50).IsRequired();
         employee.Property(item => item.FullName).HasMaxLength(150).IsRequired();
-        employee.Property(item => item.Email).HasMaxLength(254).IsRequired();
+        employee.Property(item => item.CorporateEmail).HasMaxLength(254).IsRequired();
         employee.Property(item => item.Department).HasMaxLength(100).IsRequired();
         employee.Property(item => item.CreatedAt).HasColumnType("datetimeoffset");
 
@@ -420,22 +420,22 @@ public sealed class ApplicationDbContext(
             .IsUnique()
             .HasDatabaseName("UX_Employees_EmployeeNo");
 
-        employee.HasIndex(item => item.Email)
+        employee.HasIndex(item => item.CorporateEmail)
             .IsUnique()
             .HasDatabaseName("UX_Employees_Email");
 
         var employeeCreatedAt = new DateTimeOffset(2026, 8, 1, 8, 0, 0, TimeSpan.Zero);
 
-        employee.HasData(
-            new Employee { Id = "employee-db-001", EmployeeNo = "EMP-001", FullName = "Demo Kullanıcı 1", Email = "demo.kullanici1@example.test", Department = "BT", IsActive = true, CreatedAt = employeeCreatedAt },
-            new Employee { Id = "employee-db-002", EmployeeNo = "EMP-002", FullName = "Demo Kullanıcı 2", Email = "demo.kullanici2@example.test", Department = "Finans", IsActive = true, CreatedAt = employeeCreatedAt },
-            new Employee { Id = "employee-db-003", EmployeeNo = "EMP-003", FullName = "Demo Kullanıcı 3", Email = "demo.kullanici3@example.test", Department = "İnsan Kaynakları", IsActive = true, CreatedAt = employeeCreatedAt },
-            new Employee { Id = "employee-db-004", EmployeeNo = "EMP-004", FullName = "Demo Kullanıcı 4", Email = "demo.kullanici4@example.test", Department = "Operasyon", IsActive = true, CreatedAt = employeeCreatedAt },
-            new Employee { Id = "employee-db-005", EmployeeNo = "EMP-005", FullName = "Demo Kullanıcı 5", Email = "demo.kullanici5@example.test", Department = "Satış", IsActive = true, CreatedAt = employeeCreatedAt },
-            new Employee { Id = "employee-db-006", EmployeeNo = "EMP-006", FullName = "Demo Kullanıcı 6", Email = "demo.kullanici6@example.test", Department = "Muhasebe", IsActive = true, CreatedAt = employeeCreatedAt },
-            new Employee { Id = "employee-db-007", EmployeeNo = "EMP-007", FullName = "Demo Kullanıcı 7", Email = "demo.kullanici7@example.test", Department = "Pazarlama", IsActive = true, CreatedAt = employeeCreatedAt },
-            new Employee { Id = "employee-db-008", EmployeeNo = "EMP-008", FullName = "Demo Kullanıcı 8", Email = "demo.kullanici8@example.test", Department = "Lojistik", IsActive = true, CreatedAt = employeeCreatedAt },
-            new Employee { Id = "employee-db-009", EmployeeNo = "EMP-009", FullName = "Demo Kullanıcı 9", Email = "demo.kullanici9@example.test", Department = "Operasyon", IsActive = false, CreatedAt = employeeCreatedAt });
+        IgnoreLegacyDemoData(
+            new Employee { Id = "employee-db-001", EmployeeNo = "EMP-001", FullName = "Demo Kullanıcı 1", CorporateEmail = "demo.kullanici1@example.test", Department = "Bilgi İşlem", IsActive = true, CreatedAt = employeeCreatedAt },
+            new Employee { Id = "employee-db-002", EmployeeNo = "EMP-002", FullName = "Demo Kullanıcı 2", CorporateEmail = "demo.kullanici2@example.test", Department = "Finans", IsActive = true, CreatedAt = employeeCreatedAt },
+            new Employee { Id = "employee-db-003", EmployeeNo = "EMP-003", FullName = "Demo Kullanıcı 3", CorporateEmail = "demo.kullanici3@example.test", Department = "İnsan Kaynakları", IsActive = true, CreatedAt = employeeCreatedAt },
+            new Employee { Id = "employee-db-004", EmployeeNo = "EMP-004", FullName = "Demo Kullanıcı 4", CorporateEmail = "demo.kullanici4@example.test", Department = "Operasyon", IsActive = true, CreatedAt = employeeCreatedAt },
+            new Employee { Id = "employee-db-005", EmployeeNo = "EMP-005", FullName = "Demo Kullanıcı 5", CorporateEmail = "demo.kullanici5@example.test", Department = "Satış", IsActive = true, CreatedAt = employeeCreatedAt },
+            new Employee { Id = "employee-db-006", EmployeeNo = "EMP-006", FullName = "Demo Kullanıcı 6", CorporateEmail = "demo.kullanici6@example.test", Department = "Muhasebe", IsActive = true, CreatedAt = employeeCreatedAt },
+            new Employee { Id = "employee-db-007", EmployeeNo = "EMP-007", FullName = "Demo Kullanıcı 7", CorporateEmail = "demo.kullanici7@example.test", Department = "Pazarlama", IsActive = true, CreatedAt = employeeCreatedAt },
+            new Employee { Id = "employee-db-008", EmployeeNo = "EMP-008", FullName = "Demo Kullanıcı 8", CorporateEmail = "demo.kullanici8@example.test", Department = "Lojistik", IsActive = true, CreatedAt = employeeCreatedAt },
+            new Employee { Id = "employee-db-009", EmployeeNo = "EMP-009", FullName = "Demo Kullanıcı 9", CorporateEmail = "demo.kullanici9@example.test", Department = "Operasyon", IsActive = false, CreatedAt = employeeCreatedAt });
 
         var assignment = modelBuilder.Entity<Assignment>();
 
@@ -449,8 +449,8 @@ public sealed class ApplicationDbContext(
         assignment.Property(item => item.EmployeeId).HasMaxLength(64).IsRequired();
         assignment.Property(item => item.AssignedAt).HasColumnType("datetimeoffset");
         assignment.Property(item => item.ReturnedAt).HasColumnType("datetimeoffset");
-        assignment.Property(item => item.AssignedBy).HasMaxLength(150).IsRequired();
-        assignment.Property(item => item.ReturnedBy).HasMaxLength(150);
+        assignment.Property(item => item.AssignedByUserId).HasMaxLength(64).IsRequired();
+        assignment.Property(item => item.ReturnedByUserId).HasMaxLength(64);
         assignment.Property(item => item.Notes).HasMaxLength(1000);
         assignment.Property(item => item.ReturnNotes).HasMaxLength(1000);
         assignment.Property(item => item.CreatedAt).HasColumnType("datetimeoffset");
@@ -473,24 +473,41 @@ public sealed class ApplicationDbContext(
             .HasForeignKey(item => item.EmployeeId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        assignment.HasOne(item => item.AssignedByUser)
+            .WithMany(user => user.AssignmentsCreated)
+            .HasForeignKey(item => item.AssignedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+        assignment.HasOne(item => item.ReturnedByUser)
+            .WithMany(user => user.AssignmentsReturned)
+            .HasForeignKey(item => item.ReturnedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         var assignmentCreatedAt = new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero);
 
-        assignment.HasData(
-            new Assignment { Id = "assignment-db-001", AssetId = "asset-db-001", EmployeeId = "employee-db-001", AssignedAt = new DateTimeOffset(2026, 3, 2, 9, 0, 0, TimeSpan.Zero), AssignedBy = "BT Operasyon", Notes = "Standart çalışma cihazı zimmeti.", CreatedAt = assignmentCreatedAt },
-            new Assignment { Id = "assignment-db-002", AssetId = "asset-db-008", EmployeeId = "employee-db-002", AssignedAt = new DateTimeOffset(2026, 4, 6, 10, 0, 0, TimeSpan.Zero), AssignedBy = "BT Operasyon", Notes = "Kurumsal telefon zimmeti.", CreatedAt = assignmentCreatedAt },
-            new Assignment { Id = "assignment-db-003", AssetId = "asset-db-002", EmployeeId = "employee-db-003", AssignedAt = new DateTimeOffset(2026, 2, 10, 9, 30, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 5, 15, 16, 0, 0, TimeSpan.Zero), AssignedBy = "BT Operasyon", ReturnedBy = "BT Destek", Notes = "Geçici proje cihazı.", ReturnNotes = "Eksiksiz teslim alındı.", CreatedAt = assignmentCreatedAt },
-            new Assignment { Id = "assignment-db-004", AssetId = "asset-db-004", EmployeeId = "employee-db-004", AssignedAt = new DateTimeOffset(2026, 3, 20, 8, 45, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 6, 30, 17, 0, 0, TimeSpan.Zero), AssignedBy = "BT Operasyon", ReturnedBy = "BT Destek", Notes = "Operasyon masası kullanımı.", ReturnNotes = "Cihaz depoya alındı.", CreatedAt = assignmentCreatedAt },
-            new Assignment { Id = "assignment-db-005", AssetId = "asset-db-006", EmployeeId = "employee-db-005", AssignedAt = new DateTimeOffset(2026, 4, 12, 9, 0, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 7, 18, 15, 30, 0, TimeSpan.Zero), AssignedBy = "BT Operasyon", ReturnedBy = "BT Destek", Notes = "Ek çalışma ekranı.", ReturnNotes = "Fiziksel kontrol tamamlandı.", CreatedAt = assignmentCreatedAt },
-            new Assignment { Id = "assignment-db-006", AssetId = "asset-db-010", EmployeeId = "employee-db-006", AssignedAt = new DateTimeOffset(2026, 5, 8, 11, 0, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 7, 22, 14, 0, 0, TimeSpan.Zero), AssignedBy = "BT Operasyon", ReturnedBy = "BT Destek", Notes = "Birim yazıcısı kullanımı.", ReturnNotes = "Çalışır durumda teslim alındı.", CreatedAt = assignmentCreatedAt },
-            new Assignment { Id = "assignment-db-007", AssetId = "asset-db-003", EmployeeId = "employee-db-007", AssignedAt = new DateTimeOffset(2025, 11, 3, 9, 0, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 1, 9, 16, 30, 0, TimeSpan.Zero), AssignedBy = "BT Operasyon", ReturnedBy = "BT Destek", Notes = "Dönemsel kullanım.", ReturnNotes = "Bakım kontrolü için teslim alındı.", CreatedAt = assignmentCreatedAt },
-            new Assignment { Id = "assignment-db-008", AssetId = "asset-db-007", EmployeeId = "employee-db-008", AssignedAt = new DateTimeOffset(2026, 1, 12, 10, 0, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 2, 20, 15, 0, 0, TimeSpan.Zero), AssignedBy = "BT Operasyon", ReturnedBy = "BT Destek", Notes = "Geçici monitör kullanımı.", ReturnNotes = "Teslim kaydı tamamlandı.", CreatedAt = assignmentCreatedAt });
+        IgnoreLegacyDemoData(
+            new Assignment { Id = "assignment-db-001", AssetId = "asset-db-001", EmployeeId = "employee-db-001", AssignedAt = new DateTimeOffset(2026, 3, 2, 9, 0, 0, TimeSpan.Zero), AssignedByUserId = "app-user-it", Notes = "Standart çalışma cihazı zimmeti.", CreatedAt = assignmentCreatedAt },
+            new Assignment { Id = "assignment-db-002", AssetId = "asset-db-008", EmployeeId = "employee-db-002", AssignedAt = new DateTimeOffset(2026, 4, 6, 10, 0, 0, TimeSpan.Zero), AssignedByUserId = "app-user-it", Notes = "Kurumsal telefon zimmeti.", CreatedAt = assignmentCreatedAt },
+            new Assignment { Id = "assignment-db-003", AssetId = "asset-db-002", EmployeeId = "employee-db-003", AssignedAt = new DateTimeOffset(2026, 2, 10, 9, 30, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 5, 15, 16, 0, 0, TimeSpan.Zero), AssignedByUserId = "app-user-it", ReturnedByUserId = "app-user-it", Notes = "Geçici proje cihazı.", ReturnNotes = "Eksiksiz teslim alındı.", CreatedAt = assignmentCreatedAt },
+            new Assignment { Id = "assignment-db-004", AssetId = "asset-db-004", EmployeeId = "employee-db-004", AssignedAt = new DateTimeOffset(2026, 3, 20, 8, 45, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 6, 30, 17, 0, 0, TimeSpan.Zero), AssignedByUserId = "app-user-it", ReturnedByUserId = "app-user-it", Notes = "Operasyon masası kullanımı.", ReturnNotes = "Cihaz depoya alındı.", CreatedAt = assignmentCreatedAt },
+            new Assignment { Id = "assignment-db-005", AssetId = "asset-db-006", EmployeeId = "employee-db-005", AssignedAt = new DateTimeOffset(2026, 4, 12, 9, 0, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 7, 18, 15, 30, 0, TimeSpan.Zero), AssignedByUserId = "app-user-it", ReturnedByUserId = "app-user-it", Notes = "Ek çalışma ekranı.", ReturnNotes = "Fiziksel kontrol tamamlandı.", CreatedAt = assignmentCreatedAt },
+            new Assignment { Id = "assignment-db-006", AssetId = "asset-db-010", EmployeeId = "employee-db-006", AssignedAt = new DateTimeOffset(2026, 5, 8, 11, 0, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 7, 22, 14, 0, 0, TimeSpan.Zero), AssignedByUserId = "app-user-it", ReturnedByUserId = "app-user-it", Notes = "Birim yazıcısı kullanımı.", ReturnNotes = "Çalışır durumda teslim alındı.", CreatedAt = assignmentCreatedAt },
+            new Assignment { Id = "assignment-db-007", AssetId = "asset-db-003", EmployeeId = "employee-db-007", AssignedAt = new DateTimeOffset(2025, 11, 3, 9, 0, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 1, 9, 16, 30, 0, TimeSpan.Zero), AssignedByUserId = "app-user-it", ReturnedByUserId = "app-user-it", Notes = "Dönemsel kullanım.", ReturnNotes = "Bakım kontrolü için teslim alındı.", CreatedAt = assignmentCreatedAt },
+            new Assignment { Id = "assignment-db-008", AssetId = "asset-db-007", EmployeeId = "employee-db-008", AssignedAt = new DateTimeOffset(2026, 1, 12, 10, 0, 0, TimeSpan.Zero), ReturnedAt = new DateTimeOffset(2026, 2, 20, 15, 0, 0, TimeSpan.Zero), AssignedByUserId = "app-user-it", ReturnedByUserId = "app-user-it", Notes = "Geçici monitör kullanımı.", ReturnNotes = "Teslim kaydı tamamlandı.", CreatedAt = assignmentCreatedAt });
     }
 
     private static void ConfigureAppUsers(ModelBuilder modelBuilder)
     {
         var appUser = modelBuilder.Entity<AppUser>();
 
-        appUser.ToTable("AppUsers");
+        appUser.ToTable("AppUsers", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_AppUsers_Role_Valid",
+                "[Role] IN ('Admin', 'IT', 'Employee')");
+            table.HasCheckConstraint(
+                "CK_AppUsers_ActiveEmployee_Link",
+                "[IsActive] = 0 OR [Role] = 'Admin' OR [EmployeeId] IS NOT NULL");
+        });
         appUser.HasKey(user => user.Id);
         appUser.Property(user => user.Id).HasMaxLength(64);
         appUser.Property(user => user.EmployeeId).HasMaxLength(64);
@@ -517,15 +534,6 @@ public sealed class ApplicationDbContext(
             .HasForeignKey<AppUser>(user => user.EmployeeId)
             .OnDelete(DeleteBehavior.SetNull);
 
-        const string demoPasswordHash = "AQAAAAIAAYagAAAAEMWmnyeBUMAPR3BMaPAoDlzXnRlCCuCrvk4eCLxK4dXDv3HDaUF2agezRs6Hfp5wyg==";
-        var createdAt = new DateTimeOffset(2026, 8, 14, 12, 0, 0, TimeSpan.Zero);
-
-        appUser.HasData(
-            new AppUser { Id = "app-user-admin", Username = "admin.demo", Email = "admin.demo@example.test", PasswordHash = demoPasswordHash, Role = AppRole.Admin, IsActive = true, CreatedAt = createdAt },
-            new AppUser { Id = "app-user-it", Username = "it.demo", Email = "it.demo@example.test", PasswordHash = demoPasswordHash, Role = AppRole.IT, IsActive = true, CreatedAt = createdAt },
-            new AppUser { Id = "app-user-employee", EmployeeId = "employee-db-001", Username = "employee.demo", Email = "employee.demo@example.test", PasswordHash = demoPasswordHash, Role = AppRole.Employee, IsActive = true, CreatedAt = createdAt },
-            new AppUser { Id = "app-user-auditor", Username = "auditor.demo", Email = "auditor.demo@example.test", PasswordHash = demoPasswordHash, Role = AppRole.Auditor, IsActive = true, CreatedAt = createdAt },
-            new AppUser { Id = "app-user-inactive", EmployeeId = "employee-db-009", Username = "inactive.demo", Email = "inactive.demo@example.test", PasswordHash = demoPasswordHash, Role = AppRole.Employee, IsActive = false, CreatedAt = createdAt });
     }
 
     private static void ConfigureStockItems(ModelBuilder modelBuilder)
@@ -555,7 +563,7 @@ public sealed class ApplicationDbContext(
             .IsUnique()
             .HasDatabaseName("UX_StockItems_ItemCode");
 
-        stockItem.HasData(
+        IgnoreLegacyDemoData(
             new StockItem
             {
                 Id = "stock-item-001",
@@ -810,9 +818,8 @@ public sealed class ApplicationDbContext(
             .IsRequired();
         stockTransaction.Property(transaction => transaction.TransactionDate)
             .HasColumnType("datetimeoffset");
-        stockTransaction.Property(transaction => transaction.PersonName)
-            .HasMaxLength(150)
-            .IsRequired();
+        stockTransaction.Property(transaction => transaction.PerformedByUserId).HasMaxLength(64).IsRequired();
+        stockTransaction.Property(transaction => transaction.RecipientEmployeeId).HasMaxLength(64);
         stockTransaction.Property(transaction => transaction.Note).HasMaxLength(500);
 
         stockTransaction.HasIndex(transaction => new
@@ -825,6 +832,14 @@ public sealed class ApplicationDbContext(
         stockTransaction.HasOne(transaction => transaction.StockItem)
             .WithMany(item => item.Transactions)
             .HasForeignKey(transaction => transaction.StockItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+        stockTransaction.HasOne(transaction => transaction.PerformedByUser)
+            .WithMany(user => user.StockTransactions)
+            .HasForeignKey(transaction => transaction.PerformedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+        stockTransaction.HasOne(transaction => transaction.RecipientEmployee)
+            .WithMany(employee => employee.ReceivedStockTransactions)
+            .HasForeignKey(transaction => transaction.RecipientEmployeeId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 
@@ -862,7 +877,7 @@ public sealed class ApplicationDbContext(
             .IsUnique()
             .HasDatabaseName("UX_Licenses_LicenseCode");
 
-        license.HasData(
+        IgnoreLegacyDemoData(
             new License
             {
                 Id = "license-001",
@@ -1019,16 +1034,18 @@ public sealed class ApplicationDbContext(
         maintenancePlan.Property(plan => plan.Name).HasMaxLength(150).IsRequired();
         maintenancePlan.Property(plan => plan.Description).HasMaxLength(1000);
         maintenancePlan.Property(plan => plan.StartDate).HasColumnType("date");
-        maintenancePlan.Property(plan => plan.ResponsibleTechnician)
-            .HasMaxLength(150)
-            .HasDefaultValue("Atanmamış")
-            .IsRequired();
+        maintenancePlan.Property(plan => plan.ResponsibleUserId).HasMaxLength(64).IsRequired();
+        maintenancePlan.Property(plan => plan.NextDueAt).HasColumnType("date");
         maintenancePlan.Property(plan => plan.CreatedAt).HasColumnType("datetimeoffset");
         maintenancePlan.HasIndex(plan => plan.AssetId)
             .HasDatabaseName("IX_MaintenancePlans_AssetId");
         maintenancePlan.HasOne(plan => plan.Asset)
             .WithMany(asset => asset.MaintenancePlans)
             .HasForeignKey(plan => plan.AssetId)
+            .OnDelete(DeleteBehavior.Restrict);
+        maintenancePlan.HasOne(plan => plan.ResponsibleUser)
+            .WithMany(user => user.ResponsibleMaintenancePlans)
+            .HasForeignKey(plan => plan.ResponsibleUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         var maintenanceTask = modelBuilder.Entity<MaintenanceTask>();
@@ -1046,9 +1063,8 @@ public sealed class ApplicationDbContext(
             .HasConversion<string>()
             .HasMaxLength(30)
             .IsRequired();
-        maintenanceTask.Property(task => task.TechnicianName).HasMaxLength(150);
         maintenanceTask.Property(task => task.Notes).HasMaxLength(1000);
-        maintenanceTask.Property(task => task.CompletedBy).HasMaxLength(150);
+        maintenanceTask.Property(task => task.CompletedByUserId).HasMaxLength(64);
         maintenanceTask.Property(task => task.Result).HasMaxLength(1000);
         maintenanceTask.Property(task => task.WorkNotes).HasMaxLength(1000);
         maintenanceTask.Property(task => task.CancellationReason).HasMaxLength(1000);
@@ -1064,28 +1080,32 @@ public sealed class ApplicationDbContext(
             .WithMany(asset => asset.MaintenanceTasks)
             .HasForeignKey(task => task.AssetId)
             .OnDelete(DeleteBehavior.Restrict);
+        maintenanceTask.HasOne(task => task.CompletedByUser)
+            .WithMany(user => user.CompletedMaintenanceTasks)
+            .HasForeignKey(task => task.CompletedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         var createdAt = new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero);
 
-        maintenancePlan.HasData(
-            new MaintenancePlan { Id = "maintenance-plan-001", AssetId = "asset-db-001", Name = "Periyodik Donanım Kontrolü", Description = "Genel donanım ve bağlantı kontrolleri.", FrequencyDays = 90, StartDate = new DateOnly(2026, 8, 18), ResponsibleTechnician = "Teknik Ekip A", IsActive = true, CreatedAt = createdAt },
-            new MaintenancePlan { Id = "maintenance-plan-002", AssetId = "asset-db-002", Name = "Fan ve Soğutma Bakımı", Description = "Fan temizliği ve sıcaklık kontrolü.", FrequencyDays = 120, StartDate = new DateOnly(2026, 9, 15), ResponsibleTechnician = "Teknik Ekip B", IsActive = true, CreatedAt = createdAt },
-            new MaintenancePlan { Id = "maintenance-plan-003", AssetId = "asset-db-003", Name = "Disk Sağlık Kontrolü", Description = "Disk sağlığı ve performans kontrolü.", FrequencyDays = 60, StartDate = new DateOnly(2026, 8, 1), ResponsibleTechnician = "Teknik Ekip A", IsActive = true, CreatedAt = createdAt },
-            new MaintenancePlan { Id = "maintenance-plan-004", AssetId = "asset-db-006", Name = "Ekran ve Bağlantı Kontrolü", Description = "Panel, kablo ve girişlerin kontrolü.", FrequencyDays = 180, StartDate = new DateOnly(2026, 10, 10), ResponsibleTechnician = "Teknik Ekip B", IsActive = true, CreatedAt = createdAt },
-            new MaintenancePlan { Id = "maintenance-plan-005", AssetId = "asset-db-008", Name = "Batarya Sağlık Kontrolü", Description = "Batarya kapasitesi ve şarj döngüsü kontrolü.", FrequencyDays = 90, StartDate = new DateOnly(2026, 8, 20), ResponsibleTechnician = "Mobil Destek Ekibi", IsActive = true, CreatedAt = createdAt },
-            new MaintenancePlan { Id = "maintenance-plan-006", AssetId = "asset-db-010", Name = "Yazıcı Periyodik Bakımı", Description = "Sarf ve baskı mekanizması kontrolü.", FrequencyDays = 60, StartDate = new DateOnly(2026, 7, 10), ResponsibleTechnician = "Teknik Ekip B", IsActive = true, CreatedAt = createdAt });
+        IgnoreLegacyDemoData(
+            new MaintenancePlan { Id = "maintenance-plan-001", AssetId = "asset-db-001", Name = "Periyodik Donanım Kontrolü", Description = "Genel donanım ve bağlantı kontrolleri.", FrequencyDays = 90, StartDate = new DateOnly(2026, 8, 18), ResponsibleUserId = "app-user-it", EstimatedDurationMinutes = 60, ReminderLeadDays = 7, NextDueAt = new DateOnly(2026, 8, 18), IsActive = true, CreatedAt = createdAt },
+            new MaintenancePlan { Id = "maintenance-plan-002", AssetId = "asset-db-002", Name = "Fan ve Soğutma Bakımı", Description = "Fan temizliği ve sıcaklık kontrolü.", FrequencyDays = 120, StartDate = new DateOnly(2026, 9, 15), ResponsibleUserId = "app-user-it", EstimatedDurationMinutes = 45, ReminderLeadDays = 7, NextDueAt = new DateOnly(2026, 9, 15), IsActive = true, CreatedAt = createdAt },
+            new MaintenancePlan { Id = "maintenance-plan-003", AssetId = "asset-db-003", Name = "Disk Sağlık Kontrolü", Description = "Disk sağlığı ve performans kontrolü.", FrequencyDays = 60, StartDate = new DateOnly(2026, 8, 1), ResponsibleUserId = "app-user-it", EstimatedDurationMinutes = 30, ReminderLeadDays = 5, NextDueAt = new DateOnly(2026, 8, 1), IsActive = true, CreatedAt = createdAt },
+            new MaintenancePlan { Id = "maintenance-plan-004", AssetId = "asset-db-006", Name = "Ekran ve Bağlantı Kontrolü", Description = "Panel, kablo ve girişlerin kontrolü.", FrequencyDays = 180, StartDate = new DateOnly(2026, 10, 10), ResponsibleUserId = "app-user-it", EstimatedDurationMinutes = 30, ReminderLeadDays = 10, NextDueAt = new DateOnly(2026, 10, 10), IsActive = true, CreatedAt = createdAt },
+            new MaintenancePlan { Id = "maintenance-plan-005", AssetId = "asset-db-008", Name = "Batarya Sağlık Kontrolü", Description = "Batarya kapasitesi ve şarj döngüsü kontrolü.", FrequencyDays = 90, StartDate = new DateOnly(2026, 8, 20), ResponsibleUserId = "app-user-it", EstimatedDurationMinutes = 30, ReminderLeadDays = 7, NextDueAt = new DateOnly(2026, 8, 20), IsActive = true, CreatedAt = createdAt },
+            new MaintenancePlan { Id = "maintenance-plan-006", AssetId = "asset-db-010", Name = "Yazıcı Periyodik Bakımı", Description = "Sarf ve baskı mekanizması kontrolü.", FrequencyDays = 60, StartDate = new DateOnly(2026, 7, 10), ResponsibleUserId = "app-user-it", EstimatedDurationMinutes = 60, ReminderLeadDays = 7, NextDueAt = new DateOnly(2026, 9, 8), IsActive = true, CreatedAt = createdAt });
 
-        maintenanceTask.HasData(
-            new MaintenanceTask { Id = "maintenance-task-001", MaintenancePlanId = "maintenance-plan-001", AssetId = "asset-db-001", Title = "Periyodik Donanım Kontrolü", Description = "Genel donanım ve bağlantı kontrolleri.", PlannedDate = new DateOnly(2026, 8, 18), Status = MaintenanceTaskStatus.Planned, TechnicianName = "Teknik Ekip A", CreatedAt = createdAt },
-            new MaintenanceTask { Id = "maintenance-task-002", MaintenancePlanId = "maintenance-plan-002", AssetId = "asset-db-002", Title = "Fan ve Soğutma Bakımı", Description = "Fan temizliği ve sıcaklık kontrolü.", PlannedDate = new DateOnly(2026, 9, 15), Status = MaintenanceTaskStatus.Planned, TechnicianName = "Teknik Ekip B", CreatedAt = createdAt },
-            new MaintenanceTask { Id = "maintenance-task-003", MaintenancePlanId = "maintenance-plan-003", AssetId = "asset-db-003", Title = "Disk Sağlık Kontrolü", Description = "Disk sağlığı ve performans kontrolü.", PlannedDate = new DateOnly(2026, 8, 1), Status = MaintenanceTaskStatus.Planned, TechnicianName = "Teknik Ekip A", Notes = "Öncelikli kontrol edilecek.", CreatedAt = createdAt },
+        IgnoreLegacyDemoData(
+            new MaintenanceTask { Id = "maintenance-task-001", MaintenancePlanId = "maintenance-plan-001", AssetId = "asset-db-001", Title = "Periyodik Donanım Kontrolü", Description = "Genel donanım ve bağlantı kontrolleri.", PlannedDate = new DateOnly(2026, 8, 18), Status = MaintenanceTaskStatus.Planned, CreatedAt = createdAt },
+            new MaintenanceTask { Id = "maintenance-task-002", MaintenancePlanId = "maintenance-plan-002", AssetId = "asset-db-002", Title = "Fan ve Soğutma Bakımı", Description = "Fan temizliği ve sıcaklık kontrolü.", PlannedDate = new DateOnly(2026, 9, 15), Status = MaintenanceTaskStatus.Planned, CreatedAt = createdAt },
+            new MaintenanceTask { Id = "maintenance-task-003", MaintenancePlanId = "maintenance-plan-003", AssetId = "asset-db-003", Title = "Disk Sağlık Kontrolü", Description = "Disk sağlığı ve performans kontrolü.", PlannedDate = new DateOnly(2026, 8, 1), Status = MaintenanceTaskStatus.Planned, Notes = "Öncelikli kontrol edilecek.", CreatedAt = createdAt },
             new MaintenanceTask { Id = "maintenance-task-004", MaintenancePlanId = "maintenance-plan-004", AssetId = "asset-db-006", Title = "Ekran ve Bağlantı Kontrolü", Description = "Panel, kablo ve girişlerin kontrolü.", PlannedDate = new DateOnly(2026, 10, 10), Status = MaintenanceTaskStatus.Planned, CreatedAt = createdAt },
-            new MaintenanceTask { Id = "maintenance-task-005", MaintenancePlanId = "maintenance-plan-005", AssetId = "asset-db-008", Title = "Batarya Sağlık Kontrolü", Description = "Batarya kapasitesi ve şarj döngüsü kontrolü.", PlannedDate = new DateOnly(2026, 8, 20), Status = MaintenanceTaskStatus.Planned, TechnicianName = "Mobil Destek Ekibi", CreatedAt = createdAt },
-            new MaintenanceTask { Id = "maintenance-task-006", MaintenancePlanId = "maintenance-plan-006", AssetId = "asset-db-010", Title = "Yazıcı Periyodik Bakımı", PlannedDate = new DateOnly(2026, 7, 10), CompletedDate = new DateOnly(2026, 7, 11), Status = MaintenanceTaskStatus.Completed, TechnicianName = "Teknik Ekip B", Notes = "Bakım tamamlandı.", CompletedBy = "Teknik Ekip B", Result = "Baskı ve besleme kontrolleri başarılı.", WorkNotes = "Temizlik yapıldı ve test çıktısı alındı.", CreatedAt = createdAt },
-            new MaintenanceTask { Id = "maintenance-task-007", MaintenancePlanId = "maintenance-plan-001", AssetId = "asset-db-001", Title = "Periyodik Donanım Kontrolü", PlannedDate = new DateOnly(2026, 5, 20), CompletedDate = new DateOnly(2026, 5, 20), Status = MaintenanceTaskStatus.Completed, TechnicianName = "Teknik Ekip A", Notes = "Sorun bulunmadı.", CompletedBy = "Teknik Ekip A", Result = "Donanım kontrolleri başarılı.", WorkNotes = "Bağlantılar ve sistem bileşenleri kontrol edildi.", CreatedAt = createdAt },
-            new MaintenanceTask { Id = "maintenance-task-008", MaintenancePlanId = "maintenance-plan-002", AssetId = "asset-db-002", Title = "Fan ve Soğutma Bakımı", PlannedDate = new DateOnly(2026, 7, 25), Status = MaintenanceTaskStatus.Planned, TechnicianName = "Teknik Ekip B", CreatedAt = createdAt },
+            new MaintenanceTask { Id = "maintenance-task-005", MaintenancePlanId = "maintenance-plan-005", AssetId = "asset-db-008", Title = "Batarya Sağlık Kontrolü", Description = "Batarya kapasitesi ve şarj döngüsü kontrolü.", PlannedDate = new DateOnly(2026, 8, 20), Status = MaintenanceTaskStatus.Planned, CreatedAt = createdAt },
+            new MaintenanceTask { Id = "maintenance-task-006", MaintenancePlanId = "maintenance-plan-006", AssetId = "asset-db-010", Title = "Yazıcı Periyodik Bakımı", PlannedDate = new DateOnly(2026, 7, 10), CompletedDate = new DateOnly(2026, 7, 11), Status = MaintenanceTaskStatus.Completed, Notes = "Bakım tamamlandı.", CompletedByUserId = "app-user-it", Result = "Baskı ve besleme kontrolleri başarılı.", WorkNotes = "Temizlik yapıldı ve test çıktısı alındı.", CreatedAt = createdAt },
+            new MaintenanceTask { Id = "maintenance-task-007", MaintenancePlanId = "maintenance-plan-001", AssetId = "asset-db-001", Title = "Periyodik Donanım Kontrolü", PlannedDate = new DateOnly(2026, 5, 20), CompletedDate = new DateOnly(2026, 5, 20), Status = MaintenanceTaskStatus.Completed, Notes = "Sorun bulunmadı.", CompletedByUserId = "app-user-it", Result = "Donanım kontrolleri başarılı.", WorkNotes = "Bağlantılar ve sistem bileşenleri kontrol edildi.", CreatedAt = createdAt },
+            new MaintenanceTask { Id = "maintenance-task-008", MaintenancePlanId = "maintenance-plan-002", AssetId = "asset-db-002", Title = "Fan ve Soğutma Bakımı", PlannedDate = new DateOnly(2026, 7, 25), Status = MaintenanceTaskStatus.Planned, CreatedAt = createdAt },
             new MaintenanceTask { Id = "maintenance-task-009", MaintenancePlanId = "maintenance-plan-003", AssetId = "asset-db-003", Title = "Disk Sağlık Kontrolü", PlannedDate = new DateOnly(2026, 8, 10), Status = MaintenanceTaskStatus.Cancelled, Notes = "Cihaz kullanımda olduğu için iptal edildi.", CancellationReason = "Cihaz operasyonel kullanımda olduğu için iptal edildi.", CreatedAt = createdAt },
-            new MaintenanceTask { Id = "maintenance-task-010", MaintenancePlanId = "maintenance-plan-006", AssetId = "asset-db-010", Title = "Yazıcı Periyodik Bakımı", PlannedDate = new DateOnly(2026, 9, 8), Status = MaintenanceTaskStatus.Planned, TechnicianName = "Teknik Ekip B", CreatedAt = createdAt });
+            new MaintenanceTask { Id = "maintenance-task-010", MaintenancePlanId = "maintenance-plan-006", AssetId = "asset-db-010", Title = "Yazıcı Periyodik Bakımı", PlannedDate = new DateOnly(2026, 9, 8), Status = MaintenanceTaskStatus.Planned, CreatedAt = createdAt });
 
         ConfigureMaintenanceRequests(modelBuilder, createdAt);
     }
@@ -1100,16 +1120,16 @@ public sealed class ApplicationDbContext(
         request.HasKey(item => item.Id);
         request.Property(item => item.Id).HasMaxLength(64);
         request.Property(item => item.AssetId).HasMaxLength(64).IsRequired();
+        request.Property(item => item.RequestedByEmployeeId).HasMaxLength(64).IsRequired();
+        request.Property(item => item.AssignedToUserId).HasMaxLength(64);
+        request.Property(item => item.CompletedByUserId).HasMaxLength(64);
         request.Property(item => item.Title).HasMaxLength(150).IsRequired();
         request.Property(item => item.Description).HasMaxLength(2000).IsRequired();
         request.Property(item => item.Priority).HasConversion<string>().HasMaxLength(30).IsRequired();
         request.Property(item => item.Status).HasConversion<string>().HasMaxLength(30).IsRequired();
-        request.Property(item => item.RequestedBy).HasMaxLength(150).IsRequired();
-        request.Property(item => item.AssignedTechnician).HasMaxLength(150);
         request.Property(item => item.CreatedAt).HasColumnType("datetimeoffset");
         request.Property(item => item.UpdatedAt).HasColumnType("datetimeoffset");
         request.Property(item => item.CompletedAt).HasColumnType("datetimeoffset");
-        request.Property(item => item.CompletedBy).HasMaxLength(150);
         request.Property(item => item.Result).HasMaxLength(1000);
         request.Property(item => item.WorkNotes).HasMaxLength(1000);
         request.Property(item => item.CancellationReason).HasMaxLength(1000);
@@ -1119,14 +1139,28 @@ public sealed class ApplicationDbContext(
             .WithMany(asset => asset.MaintenanceRequests)
             .HasForeignKey(item => item.AssetId)
             .OnDelete(DeleteBehavior.Restrict);
+        request.HasOne(item => item.RequestedByEmployee)
+            .WithMany(employee => employee.SupportRequests)
+            .HasForeignKey(item => item.RequestedByEmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+        request.HasOne(item => item.AssignedToUser)
+            .WithMany(user => user.AssignedSupportRequests)
+            .HasForeignKey(item => item.AssignedToUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+        request.HasOne(item => item.CompletedByUser)
+            .WithMany(user => user.CompletedSupportRequests)
+            .HasForeignKey(item => item.CompletedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-        request.HasData(
-            new MaintenanceRequest { Id = "maintenance-request-001", AssetId = "asset-db-001", Title = "Cihaz çok ısınıyor", Description = "Yoğun kullanım sırasında fan sürekli yüksek hızda çalışıyor.", Priority = MaintenanceRequestPriority.High, Status = MaintenanceRequestStatus.Open, RequestedBy = "Operasyon Kullanıcısı", CreatedAt = createdAt.AddDays(7), UpdatedAt = createdAt.AddDays(7) },
-            new MaintenanceRequest { Id = "maintenance-request-002", AssetId = "asset-db-010", Title = "Yazıcı çizgili basıyor", Description = "Renkli çıktılarda dikey çizgiler oluşuyor.", Priority = MaintenanceRequestPriority.Normal, Status = MaintenanceRequestStatus.Assigned, RequestedBy = "Finans Kullanıcısı", AssignedTechnician = "Teknik Ekip B", CreatedAt = createdAt.AddDays(8), UpdatedAt = createdAt.AddDays(9) },
-            new MaintenanceRequest { Id = "maintenance-request-003", AssetId = "asset-db-006", Title = "Görüntü aralıklı kesiliyor", Description = "Monitör görüntüsü kısa sürelerle kesiliyor.", Priority = MaintenanceRequestPriority.Critical, Status = MaintenanceRequestStatus.InProgress, RequestedBy = "Tasarım Kullanıcısı", AssignedTechnician = "Teknik Ekip A", CreatedAt = createdAt.AddDays(9), UpdatedAt = createdAt.AddDays(10) },
-            new MaintenanceRequest { Id = "maintenance-request-004", AssetId = "asset-db-002", Title = "USB bağlantısı çalışmıyor", Description = "Sol taraftaki USB bağlantı noktası cihazları algılamıyor.", Priority = MaintenanceRequestPriority.Low, Status = MaintenanceRequestStatus.Completed, RequestedBy = "Satış Kullanıcısı", AssignedTechnician = "Teknik Ekip B", CreatedAt = createdAt.AddDays(2), UpdatedAt = createdAt.AddDays(4), CompletedAt = createdAt.AddDays(4), CompletedBy = "Teknik Ekip B", Result = "Bağlantı sürücüsü yenilendi.", WorkNotes = "Sürücü kurulumu sonrası bağlantı test edildi." },
-            new MaintenanceRequest { Id = "maintenance-request-005", AssetId = "asset-db-008", Title = "Şarj süresi çok kısa", Description = "Batarya normalden hızlı tükeniyor.", Priority = MaintenanceRequestPriority.High, Status = MaintenanceRequestStatus.Cancelled, RequestedBy = "Saha Kullanıcısı", CreatedAt = createdAt.AddDays(3), UpdatedAt = createdAt.AddDays(5), CancellationReason = "Cihaz garanti servisine gönderildi." },
-            new MaintenanceRequest { Id = "maintenance-request-006", AssetId = "asset-db-004", Title = "Cihaz açılışta hata veriyor", Description = "İlk açılışta disk denetim uyarısı gösteriliyor.", Priority = MaintenanceRequestPriority.Critical, Status = MaintenanceRequestStatus.Open, RequestedBy = "Muhasebe Kullanıcısı", CreatedAt = createdAt.AddDays(11), UpdatedAt = createdAt.AddDays(11) },
-            new MaintenanceRequest { Id = "maintenance-request-007", AssetId = "asset-db-003", Title = "Klavye tuşu takılıyor", Description = "Enter tuşu zaman zaman takılı kalıyor.", Priority = MaintenanceRequestPriority.Normal, Status = MaintenanceRequestStatus.Completed, RequestedBy = "Destek Kullanıcısı", AssignedTechnician = "Teknik Ekip A", CreatedAt = createdAt.AddDays(1), UpdatedAt = createdAt.AddDays(6), CompletedAt = createdAt.AddDays(6), CompletedBy = "Teknik Ekip A", Result = "Klavye temizliği ve mekanik kontrol tamamlandı.", WorkNotes = "Tuş mekanizması temizlenerek tekrar test edildi." });
+        IgnoreLegacyDemoData(
+            new MaintenanceRequest { Id = "maintenance-request-001", AssetId = "asset-db-001", RequestedByEmployeeId = "employee-db-001", Title = "Cihaz çok ısınıyor", Description = "Yoğun kullanım sırasında fan sürekli yüksek hızda çalışıyor.", Priority = MaintenanceRequestPriority.High, Status = MaintenanceRequestStatus.Open, CreatedAt = createdAt.AddDays(7), UpdatedAt = createdAt.AddDays(7) },
+            new MaintenanceRequest { Id = "maintenance-request-002", AssetId = "asset-db-008", RequestedByEmployeeId = "employee-db-002", Title = "Wi-Fi bağlantısı kopuyor", Description = "Kablosuz bağlantı aralıklarla kesiliyor.", Priority = MaintenanceRequestPriority.Normal, Status = MaintenanceRequestStatus.Assigned, AssignedToUserId = "app-user-it", CreatedAt = createdAt.AddDays(8), UpdatedAt = createdAt.AddDays(9) },
+            new MaintenanceRequest { Id = "maintenance-request-003", AssetId = "asset-db-001", RequestedByEmployeeId = "employee-db-001", Title = "VPN bağlanmıyor", Description = "Kurumsal VPN bağlantısı kurulamıyor.", Priority = MaintenanceRequestPriority.Critical, Status = MaintenanceRequestStatus.InProgress, AssignedToUserId = "app-user-it", CreatedAt = createdAt.AddDays(9), UpdatedAt = createdAt.AddDays(10) },
+            new MaintenanceRequest { Id = "maintenance-request-004", AssetId = "asset-db-008", RequestedByEmployeeId = "employee-db-002", Title = "Uygulama açılmıyor", Description = "Kurumsal uygulama başlatılamıyor.", Priority = MaintenanceRequestPriority.Low, Status = MaintenanceRequestStatus.Completed, AssignedToUserId = "app-user-it", CreatedAt = createdAt.AddDays(2), UpdatedAt = createdAt.AddDays(4), CompletedAt = createdAt.AddDays(4), CompletedByUserId = "app-user-it", Result = "Uygulama yapılandırması yenilendi.", WorkNotes = "Yapılandırma sonrası erişim test edildi." });
     }
+
+    // Bu nesneler eski migration'ların geri alınabilmesi için kaynakta geçici olarak korunur;
+    // modele seed olarak eklenmez. Yeni demo verileri yalnız DevelopmentDataSeeder tarafından üretilir.
+    private static void IgnoreLegacyDemoData(params object[] records) =>
+        _ = records;
 }

@@ -18,3 +18,10 @@ export interface CreateUserInput {
   password: string
   role: UserRole
 }
+
+export interface ItStaffMember {
+  userId: string
+  employeeId: string
+  fullName: string
+  email: string
+}

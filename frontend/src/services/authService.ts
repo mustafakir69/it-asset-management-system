@@ -3,7 +3,7 @@ import type { AuthUser, LoginCredentials, LoginResponse, UserRole } from '../typ
 import { apiClient } from './api'
 import { clearStoredToken, getStoredToken, storeToken } from './authStorage'
 
-const userRoles: UserRole[] = ['Admin', 'IT', 'Employee', 'Auditor']
+const userRoles: UserRole[] = ['Admin', 'IT', 'Employee']
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null

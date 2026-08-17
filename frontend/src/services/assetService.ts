@@ -46,6 +46,10 @@ const mapAssetResponse = (value: unknown): Asset => {
     location,
     purchaseDate,
     warrantyEndDate,
+    currentAssigneeEmployeeId,
+    currentAssigneeName,
+    currentAssigneeDepartment,
+    currentAssignmentDate,
   } = value
 
   if (
@@ -58,7 +62,11 @@ const mapAssetResponse = (value: unknown): Asset => {
     typeof status !== 'string' ||
     typeof location !== 'string' ||
     typeof purchaseDate !== 'string' ||
-    typeof warrantyEndDate !== 'string' ||
+    (warrantyEndDate !== null && typeof warrantyEndDate !== 'string') ||
+    (currentAssigneeEmployeeId !== null && typeof currentAssigneeEmployeeId !== 'string') ||
+    (currentAssigneeName !== null && typeof currentAssigneeName !== 'string') ||
+    (currentAssigneeDepartment !== null && typeof currentAssigneeDepartment !== 'string') ||
+    (currentAssignmentDate !== null && typeof currentAssignmentDate !== 'string') ||
     !isAssetCategory(category) ||
     !isAssetStatus(status) ||
     !isAssetLocation(location)
@@ -77,6 +85,10 @@ const mapAssetResponse = (value: unknown): Asset => {
     location,
     purchaseDate,
     warrantyEndDate,
+    currentAssigneeEmployeeId,
+    currentAssigneeName,
+    currentAssigneeDepartment,
+    currentAssignmentDate,
   }
 }
 

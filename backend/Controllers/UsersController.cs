@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TakipProgrami.Api.DTOs;
 using TakipProgrami.Api.Entities;
 using TakipProgrami.Api.Services;
@@ -17,6 +18,13 @@ public sealed class UsersController(UserService userService) : ControllerBase
     public async Task<ActionResult<IReadOnlyList<UserDto>>> GetAll(
         CancellationToken cancellationToken) =>
         Ok(await userService.GetUsersAsync(cancellationToken));
+
+    [HttpGet("it-staff")]
+    public async Task<ActionResult> GetItStaff([FromServices] TakipProgrami.Api.Data.ApplicationDbContext db, CancellationToken cancellationToken) =>
+        Ok(await db.AppUsers.AsNoTracking().Where(x => x.IsActive && x.Role == AppRole.IT && x.EmployeeId != null)
+            .OrderBy(x => x.Employee!.FullName)
+            .Select(x => new { UserId = x.Id, EmployeeId = x.EmployeeId!, FullName = x.Employee!.FullName, Email = x.Email })
+            .ToListAsync(cancellationToken));
 
     [HttpPost]
     [ProducesResponseType<UserDto>(StatusCodes.Status201Created)]

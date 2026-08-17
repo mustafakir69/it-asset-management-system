@@ -9,6 +9,10 @@ public sealed record MaintenancePlanDto(
     string? Description,
     int FrequencyDays,
     DateOnly StartDate,
-    string ResponsibleTechnician,
+    string ResponsibleUserId,
+    string ResponsibleUserName,
+    int EstimatedDurationMinutes,
+    int ReminderLeadDays,
+    DateOnly NextDueAt,
     bool IsActive,
     DateTimeOffset CreatedAt);

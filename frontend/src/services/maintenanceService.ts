@@ -16,29 +16,55 @@ import {
 import { apiClient } from './api'
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null
-const isNullableString = (value: unknown): value is string | null => typeof value === 'string' || value === null
+const nullableString = (value: unknown): value is string | null => value === null || typeof value === 'string'
+const string = (value: unknown, label: string): string => { if (typeof value !== 'string') throw new Error(`${label} alanı geçersiz.`); return value }
+const number = (value: unknown, label: string): number => { if (typeof value !== 'number') throw new Error(`${label} alanı geçersiz.`); return value }
+const nullable = (value: unknown, label: string): string | null => { if (!nullableString(value)) throw new Error(`${label} alanı geçersiz.`); return value }
 const inValues = (value: string, values: readonly string[]) => values.includes(value)
 const isStoredStatus = (value: string): value is MaintenanceStoredStatus => inValues(value, ['Planlandı', 'Tamamlandı', 'İptal Edildi'])
 
 const mapPlan = (value: unknown): MaintenancePlan => {
   if (!isRecord(value)) throw new Error('API geçersiz bir bakım planı döndürdü.')
-  const { id, assetId, assetCode, assetName, name, description, frequencyDays, startDate, responsibleTechnician, isActive, createdAt } = value
-  if (typeof id !== 'string' || typeof assetId !== 'string' || typeof assetCode !== 'string' || typeof assetName !== 'string' || typeof name !== 'string' || !isNullableString(description) || typeof frequencyDays !== 'number' || typeof startDate !== 'string' || typeof responsibleTechnician !== 'string' || typeof isActive !== 'boolean' || typeof createdAt !== 'string') throw new Error('API bakım planı verileri beklenen formatta değil.')
-  return { id, assetId, assetCode, assetName, name, description, frequencyDays, startDate, responsibleTechnician, isActive, createdAt }
+  return {
+    id: string(value.id, 'id'), assetId: string(value.assetId, 'assetId'), assetCode: string(value.assetCode, 'assetCode'),
+    assetName: string(value.assetName, 'assetName'), name: string(value.name, 'name'), description: nullable(value.description, 'description'),
+    frequencyDays: number(value.frequencyDays, 'frequencyDays'), startDate: string(value.startDate, 'startDate'),
+    responsibleUserId: string(value.responsibleUserId, 'responsibleUserId'), responsibleUserName: string(value.responsibleUserName, 'responsibleUserName'),
+    estimatedDurationMinutes: number(value.estimatedDurationMinutes, 'estimatedDurationMinutes'), reminderLeadDays: number(value.reminderLeadDays, 'reminderLeadDays'),
+    nextDueAt: string(value.nextDueAt, 'nextDueAt'), isActive: value.isActive === true, createdAt: string(value.createdAt, 'createdAt'),
+  }
 }
 
 const mapTask = (value: unknown): MaintenanceTask => {
   if (!isRecord(value)) throw new Error('API geçersiz bir bakım görevi döndürdü.')
-  const { id, maintenancePlanId, assetId, assetCode, assetName, title, description, plannedDate, completedDate, status, displayStatus, assignedTechnician, notes, completedBy, result, workNotes, cancellationReason, createdAt } = value
-  if (typeof id !== 'string' || typeof maintenancePlanId !== 'string' || typeof assetId !== 'string' || typeof assetCode !== 'string' || typeof assetName !== 'string' || typeof title !== 'string' || !isNullableString(description) || typeof plannedDate !== 'string' || !isNullableString(completedDate) || typeof status !== 'string' || !isStoredStatus(status) || typeof displayStatus !== 'string' || !inValues(displayStatus, maintenanceTaskStatuses) || !isNullableString(assignedTechnician) || !isNullableString(notes) || !isNullableString(completedBy) || !isNullableString(result) || !isNullableString(workNotes) || !isNullableString(cancellationReason) || typeof createdAt !== 'string') throw new Error('API bakım görevi verileri beklenen formatta değil.')
-  return { id, maintenancePlanId, assetId, assetCode, assetName, title, description, plannedDate, completedDate, status, displayStatus: displayStatus as MaintenanceTask['displayStatus'], assignedTechnician, notes, completedBy, result, workNotes, cancellationReason, createdAt }
+  const status = string(value.status, 'status'); const displayStatus = string(value.displayStatus, 'displayStatus')
+  if (!isStoredStatus(status) || !inValues(displayStatus, maintenanceTaskStatuses)) throw new Error('Bakım görev durumu geçersiz.')
+  return {
+    id: string(value.id, 'id'), maintenancePlanId: string(value.maintenancePlanId, 'maintenancePlanId'), assetId: string(value.assetId, 'assetId'),
+    assetCode: string(value.assetCode, 'assetCode'), assetName: string(value.assetName, 'assetName'), title: string(value.title, 'title'),
+    description: nullable(value.description, 'description'), plannedDate: string(value.plannedDate, 'plannedDate'), completedDate: nullable(value.completedDate, 'completedDate'),
+    status, displayStatus: displayStatus as MaintenanceTask['displayStatus'], responsibleUserId: string(value.responsibleUserId, 'responsibleUserId'),
+    responsibleUserName: string(value.responsibleUserName, 'responsibleUserName'), notes: nullable(value.notes, 'notes'),
+    completedByUserId: nullable(value.completedByUserId, 'completedByUserId'), completedByName: nullable(value.completedByName, 'completedByName'),
+    result: nullable(value.result, 'result'), workNotes: nullable(value.workNotes, 'workNotes'), cancellationReason: nullable(value.cancellationReason, 'cancellationReason'),
+    createdAt: string(value.createdAt, 'createdAt'),
+  }
 }
 
 const mapRequest = (value: unknown): MaintenanceRequest => {
-  if (!isRecord(value)) throw new Error('API geçersiz bir bakım talebi döndürdü.')
-  const { id, requestNumber, assetId, assetCode, assetName, title, description, priority, status, requestedBy, assignedTechnician, createdAt, updatedAt, completedAt, completedBy, result, workNotes, cancellationReason } = value
-  if (typeof id !== 'string' || typeof requestNumber !== 'string' || typeof assetId !== 'string' || typeof assetCode !== 'string' || typeof assetName !== 'string' || typeof title !== 'string' || typeof description !== 'string' || typeof priority !== 'string' || !inValues(priority, maintenanceRequestPriorities) || typeof status !== 'string' || !inValues(status, maintenanceRequestStatuses) || typeof requestedBy !== 'string' || !isNullableString(assignedTechnician) || typeof createdAt !== 'string' || typeof updatedAt !== 'string' || !isNullableString(completedAt) || !isNullableString(completedBy) || !isNullableString(result) || !isNullableString(workNotes) || !isNullableString(cancellationReason)) throw new Error('API bakım talebi verileri beklenen formatta değil.')
-  return { id, requestNumber, assetId, assetCode, assetName, title, description, priority: priority as MaintenanceRequest['priority'], status: status as MaintenanceRequest['status'], requestedBy, assignedTechnician, createdAt, updatedAt, completedAt, completedBy, result, workNotes, cancellationReason }
+  if (!isRecord(value)) throw new Error('API geçersiz bir teknik destek talebi döndürdü.')
+  const priority = string(value.priority, 'priority'); const status = string(value.status, 'status')
+  if (!inValues(priority, maintenanceRequestPriorities) || !inValues(status, maintenanceRequestStatuses)) throw new Error('Teknik destek durumu geçersiz.')
+  return {
+    id: string(value.id, 'id'), requestNumber: string(value.requestNumber, 'requestNumber'), assetId: string(value.assetId, 'assetId'),
+    assetCode: string(value.assetCode, 'assetCode'), assetName: string(value.assetName, 'assetName'), requestedByEmployeeId: string(value.requestedByEmployeeId, 'requestedByEmployeeId'),
+    requestedByName: string(value.requestedByName, 'requestedByName'), requestedByDepartment: string(value.requestedByDepartment, 'requestedByDepartment'),
+    title: string(value.title, 'title'), description: string(value.description, 'description'), priority: priority as MaintenanceRequest['priority'], status: status as MaintenanceRequest['status'],
+    assignedToUserId: nullable(value.assignedToUserId, 'assignedToUserId'), assignedToName: nullable(value.assignedToName, 'assignedToName'),
+    createdAt: string(value.createdAt, 'createdAt'), updatedAt: string(value.updatedAt, 'updatedAt'), completedAt: nullable(value.completedAt, 'completedAt'),
+    completedByUserId: nullable(value.completedByUserId, 'completedByUserId'), completedByName: nullable(value.completedByName, 'completedByName'),
+    result: nullable(value.result, 'result'), workNotes: nullable(value.workNotes, 'workNotes'), cancellationReason: nullable(value.cancellationReason, 'cancellationReason'),
+  }
 }
 
 const validationMessage = (value: unknown): string | undefined => isRecord(value) ? Object.values(value).flatMap((entry) => Array.isArray(entry) ? entry.filter((item): item is string => typeof item === 'string') : []).join(' ') || undefined : undefined
@@ -49,12 +75,10 @@ const apiError = (error: unknown, fallback: string): Error => {
   if (isRecord(data)) return new Error(validationMessage(data.errors) ?? (typeof data.detail === 'string' ? data.detail : fallback))
   return new Error(fallback)
 }
-
 const getList = async <T>(url: string, mapper: (value: unknown) => T, fallback: string): Promise<T[]> => {
-  try { const response = await apiClient.get<unknown>(url); if (!Array.isArray(response.data)) throw new Error(fallback); return response.data.map(mapper) }
+  try { const data: unknown = (await apiClient.get<unknown>(url)).data; if (!Array.isArray(data)) throw new Error(fallback); return data.map(mapper) }
   catch (error: unknown) { throw apiError(error, fallback) }
 }
-
 const getOne = async <T>(url: string, mapper: (value: unknown) => T, fallback: string): Promise<T | undefined> => {
   try { return mapper((await apiClient.get<unknown>(url)).data) }
   catch (error: unknown) { if (axios.isAxiosError(error) && error.response?.status === 404) return undefined; throw apiError(error, fallback) }
@@ -71,12 +95,12 @@ export const maintenanceService = {
   async completeTask(id: string, input: MaintenanceTaskCompleteInput) { try { return mapTask((await apiClient.put(`/api/maintenance/tasks/${encodeURIComponent(id)}/complete`, input)).data) } catch (error) { throw apiError(error, 'Bakım görevi tamamlanamadı.') } },
   async cancelTask(id: string, cancellationReason: string) { try { return mapTask((await apiClient.put(`/api/maintenance/tasks/${encodeURIComponent(id)}/cancel`, { cancellationReason })).data) } catch (error) { throw apiError(error, 'Bakım görevi iptal edilemedi.') } },
   async rescheduleTask(id: string, input: MaintenanceTaskRescheduleInput) { try { return mapTask((await apiClient.put(`/api/maintenance/tasks/${encodeURIComponent(id)}/reschedule`, input)).data) } catch (error) { throw apiError(error, 'Bakım görevi yeniden planlanamadı.') } },
-  getRequests: () => getList('/api/maintenance/requests', mapRequest, 'Bakım talepleri yüklenemedi.'),
-  getRequestById: (id: string) => getOne(`/api/maintenance/requests/${encodeURIComponent(id)}`, mapRequest, 'Bakım talebi yüklenemedi.'),
-  async createRequest(input: MaintenanceRequestInput) { try { return mapRequest((await apiClient.post('/api/maintenance/requests', input)).data) } catch (error) { throw apiError(error, 'Bakım talebi kaydedilemedi.') } },
-  async updateRequest(id: string, input: MaintenanceRequestInput) { try { return mapRequest((await apiClient.put(`/api/maintenance/requests/${encodeURIComponent(id)}`, input)).data) } catch (error) { throw apiError(error, 'Bakım talebi güncellenemedi.') } },
-  async assignRequest(id: string, assignedTechnician: string) { try { return mapRequest((await apiClient.put(`/api/maintenance/requests/${encodeURIComponent(id)}/assign`, { assignedTechnician })).data) } catch (error) { throw apiError(error, 'Bakım talebi atanamadı.') } },
-  async startRequest(id: string) { try { return mapRequest((await apiClient.put(`/api/maintenance/requests/${encodeURIComponent(id)}/start`)).data) } catch (error) { throw apiError(error, 'Bakım talebi işleme alınamadı.') } },
-  async completeRequest(id: string, input: MaintenanceCompleteInput) { try { return mapRequest((await apiClient.put(`/api/maintenance/requests/${encodeURIComponent(id)}/complete`, input)).data) } catch (error) { throw apiError(error, 'Bakım talebi tamamlanamadı.') } },
-  async cancelRequest(id: string, cancellationReason: string) { try { return mapRequest((await apiClient.put(`/api/maintenance/requests/${encodeURIComponent(id)}/cancel`, { cancellationReason })).data) } catch (error) { throw apiError(error, 'Bakım talebi iptal edilemedi.') } },
+  getRequests: () => getList('/api/support-requests', mapRequest, 'Teknik destek talepleri yüklenemedi.'),
+  getMyRequests: () => getList('/api/support-requests/my', mapRequest, 'Teknik destek talepleriniz yüklenemedi.'),
+  getRequestById: (id: string) => getOne(`/api/support-requests/${encodeURIComponent(id)}`, mapRequest, 'Teknik destek talebi yüklenemedi.'),
+  async createRequest(input: MaintenanceRequestInput) { try { return mapRequest((await apiClient.post('/api/support-requests', input)).data) } catch (error) { throw apiError(error, 'Teknik destek talebi kaydedilemedi.') } },
+  async assignRequest(id: string, assignedToUserId: string) { try { return mapRequest((await apiClient.put(`/api/support-requests/${encodeURIComponent(id)}/assign`, { assignedToUserId })).data) } catch (error) { throw apiError(error, 'Teknik destek talebi atanamadı.') } },
+  async startRequest(id: string) { try { return mapRequest((await apiClient.put(`/api/support-requests/${encodeURIComponent(id)}/start`)).data) } catch (error) { throw apiError(error, 'Teknik destek talebi işleme alınamadı.') } },
+  async completeRequest(id: string, input: MaintenanceCompleteInput) { try { return mapRequest((await apiClient.put(`/api/support-requests/${encodeURIComponent(id)}/complete`, input)).data) } catch (error) { throw apiError(error, 'Teknik destek talebi tamamlanamadı.') } },
+  async cancelRequest(id: string, cancellationReason: string) { try { return mapRequest((await apiClient.put(`/api/support-requests/${encodeURIComponent(id)}/cancel`, { cancellationReason })).data) } catch (error) { throw apiError(error, 'Teknik destek talebi iptal edilemedi.') } },
 }

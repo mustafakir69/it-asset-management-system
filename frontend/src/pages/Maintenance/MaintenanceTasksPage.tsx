@@ -35,7 +35,7 @@ function MaintenanceTasksPage() {
     { title: 'Cihaz', key: 'asset', width: 210, sorter: (a, b) => a.assetCode.localeCompare(b.assetCode, 'tr-TR'), render: (_value, task) => <Space direction="vertical" size={0}><Typography.Text strong>{task.assetCode}</Typography.Text><Typography.Text type="secondary">{task.assetName}</Typography.Text></Space> },
     { title: 'Bakım', dataIndex: 'title', key: 'title', ellipsis: true, width: 210, sorter: (a, b) => a.title.localeCompare(b.title, 'tr-TR') },
     { title: 'Planlanan Tarih', dataIndex: 'plannedDate', key: 'plannedDate', align: 'center', width: 135, sorter: (a, b) => a.plannedDate.localeCompare(b.plannedDate), render: (value: string) => formatDate(value) },
-    { title: 'Sorumlu / Teknisyen', dataIndex: 'assignedTechnician', key: 'assignedTechnician', ellipsis: true, width: 155, responsive: ['md'], render: (value: string | null) => value || '—' },
+    { title: 'Sorumlu IT', dataIndex: 'responsibleUserName', key: 'responsibleUserName', ellipsis: true, width: 155, responsive: ['md'] },
     { title: 'Durum', dataIndex: 'displayStatus', key: 'displayStatus', align: 'center', width: 120, render: (value: MaintenanceTaskStatus) => <StatusTag status={value} /> },
     { title: 'İşlemler', key: 'actions', align: 'center', width: 72, render: (_value, task) => <MaintenanceTaskActions onSuccess={() => void loadTasks()} task={task} /> },
   ]

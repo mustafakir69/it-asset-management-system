@@ -8,7 +8,7 @@ import { maintenanceService } from '../../services/maintenanceService'
 import type { MaintenanceTask } from '../../types/maintenance'
 
 type ActionType = 'complete' | 'cancel' | 'reschedule'
-interface ActionValues { date?: Dayjs; person?: string; result?: string; workNotes?: string; cancellationReason?: string }
+interface ActionValues { date?: Dayjs; result?: string; workNotes?: string; cancellationReason?: string }
 export interface MaintenanceTaskActionsProps { task: MaintenanceTask; onSuccess?: () => void; mode?: 'menu' | 'buttons' }
 
 function MaintenanceTaskActions({ task, onSuccess, mode = 'menu' }: MaintenanceTaskActionsProps) {
@@ -24,7 +24,7 @@ function MaintenanceTaskActions({ task, onSuccess, mode = 'menu' }: MaintenanceT
     const values = await form.validateFields()
     setSubmitting(true)
     try {
-      if (action === 'complete') await maintenanceService.completeTask(task.id, { completedDate: values.date!.format('YYYY-MM-DD'), completedBy: values.person!.trim(), result: values.result!.trim(), workNotes: values.workNotes!.trim() })
+      if (action === 'complete') await maintenanceService.completeTask(task.id, { completedDate: values.date!.format('YYYY-MM-DD'), result: values.result!.trim(), workNotes: values.workNotes!.trim() })
       if (action === 'cancel') await maintenanceService.cancelTask(task.id, values.cancellationReason!.trim())
       if (action === 'reschedule') await maintenanceService.rescheduleTask(task.id, { plannedDate: values.date!.format('YYYY-MM-DD'), workNotes: values.workNotes!.trim() })
       message.success(action === 'complete' ? 'Bakım görevi tamamlandı ve sonraki görev kontrol edildi.' : action === 'cancel' ? 'Bakım görevi iptal edildi.' : 'Bakım görevi yeniden planlandı.')
@@ -50,7 +50,7 @@ function MaintenanceTaskActions({ task, onSuccess, mode = 'menu' }: MaintenanceT
     <Modal destroyOnHidden confirmLoading={submitting} okText={action === 'cancel' ? 'İptal Et' : 'Kaydet'} onCancel={() => setAction(null)} onOk={() => void submit()} open={action !== null} title={modalTitle}>
       <Form form={form} layout="vertical" preserve={false}>
         {(action === 'complete' || action === 'reschedule') && <Form.Item label={action === 'complete' ? 'Gerçekleşen Tarih' : 'Yeni Planlanan Tarih'} name="date" rules={[{ required: true, message: 'Tarih zorunludur.' }]}><DatePicker format="DD.MM.YYYY" style={{ width: '100%' }} /></Form.Item>}
-        {action === 'complete' && <><Form.Item label="Bakımı Yapan" name="person" rules={[{ required: true, whitespace: true, message: 'Bakımı yapan kişi zorunludur.' }]}><Input /></Form.Item><Form.Item label="Sonuç" name="result" rules={[{ required: true, whitespace: true, message: 'Sonuç zorunludur.' }]}><Input.TextArea rows={2} /></Form.Item></>}
+        {action === 'complete' && <Form.Item label="Sonuç" name="result" rules={[{ required: true, whitespace: true, message: 'Sonuç zorunludur.' }]}><Input.TextArea rows={2} /></Form.Item>}
         {(action === 'complete' || action === 'reschedule') && <Form.Item label="İşlem Notu" name="workNotes" rules={[{ required: true, whitespace: true, message: 'İşlem notu zorunludur.' }]}><Input.TextArea rows={3} /></Form.Item>}
         {action === 'cancel' && <Form.Item label="İptal Nedeni" name="cancellationReason" rules={[{ required: true, whitespace: true, message: 'İptal nedeni zorunludur.' }]}><Input.TextArea rows={3} /></Form.Item>}
       </Form>

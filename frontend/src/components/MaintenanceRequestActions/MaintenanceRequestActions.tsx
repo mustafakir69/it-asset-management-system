@@ -1,26 +1,54 @@
-import { CheckOutlined, CloseOutlined, EditOutlined, EyeOutlined, MoreOutlined, PlayCircleOutlined, UserSwitchOutlined } from '@ant-design/icons'
-import { App as AntdApp, Button, DatePicker, Dropdown, Form, Input, Modal, Space, Tooltip } from 'antd'
+import { CheckOutlined, CloseOutlined, EyeOutlined, MoreOutlined, PlayCircleOutlined, TeamOutlined } from '@ant-design/icons'
+import { App as AntdApp, Button, DatePicker, Dropdown, Form, Input, Modal, Select, Space, Tooltip } from 'antd'
 import type { MenuProps } from 'antd'
 import type { Dayjs } from 'dayjs'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/useAuth'
 import { maintenanceService } from '../../services/maintenanceService'
+import { userService } from '../../services/userService'
 import type { MaintenanceRequest } from '../../types/maintenance'
+import type { ItStaffMember } from '../../types/user'
 
 type Action = 'assign' | 'complete' | 'cancel'
-interface Values { technician?: string; completedAt?: Dayjs; completedBy?: string; result?: string; workNotes?: string; cancellationReason?: string }
+interface Values { assignedToUserId?: string; completedAt?: Dayjs; result?: string; workNotes?: string; cancellationReason?: string }
 export interface MaintenanceRequestActionsProps { request: MaintenanceRequest; onSuccess?: () => void; mode?: 'menu' | 'buttons' }
 
 function MaintenanceRequestActions({ request, onSuccess, mode = 'menu' }: MaintenanceRequestActionsProps) {
-  const navigate = useNavigate(); const { message, modal } = AntdApp.useApp(); const [form] = Form.useForm<Values>(); const [action, setAction] = useState<Action | null>(null); const [submitting, setSubmitting] = useState(false)
-  const terminal = request.status === 'Tamamlandı' || request.status === 'İptal Edildi'
-  const open = (next: Action) => { form.resetFields(); if (next === 'assign' && request.assignedTechnician) form.setFieldValue('technician', request.assignedTechnician); setAction(next) }
-  const refresh = () => onSuccess?.()
-  const start = () => modal.confirm({ title: 'Bakım talebini işleme al', content: 'Talebi İşlemde durumuna almak istediğinize emin misiniz?', okText: 'İşleme Al', cancelText: 'Vazgeç', onOk: async () => { try { await maintenanceService.startRequest(request.id); message.success('Bakım talebi işleme alındı.'); refresh() } catch (reason: unknown) { message.error(reason instanceof Error ? reason.message : 'Talep işleme alınamadı.') } } })
-  const submit = async () => { const values = await form.validateFields(); setSubmitting(true); try { if (action === 'assign') await maintenanceService.assignRequest(request.id, values.technician!.trim()); if (action === 'complete') await maintenanceService.completeRequest(request.id, { completedAt: values.completedAt!.toISOString(), completedBy: values.completedBy!.trim(), result: values.result!.trim(), workNotes: values.workNotes!.trim() }); if (action === 'cancel') await maintenanceService.cancelRequest(request.id, values.cancellationReason!.trim()); message.success(action === 'assign' ? 'Teknisyen atandı.' : action === 'complete' ? 'Bakım talebi tamamlandı.' : 'Bakım talebi iptal edildi.'); setAction(null); refresh() } catch (reason: unknown) { if (reason instanceof Error) message.error(reason.message) } finally { setSubmitting(false) } }
-  const items: MenuProps['items'] = [{ key: 'view', icon: <EyeOutlined />, label: 'Görüntüle', onClick: () => void navigate(`/maintenance/requests/${request.id}`) }, ...(!terminal ? [{ key: 'edit', icon: <EditOutlined />, label: request.status === 'İşlemde' ? 'Güncelle' : 'Düzenle', onClick: () => void navigate(`/maintenance/requests/${request.id}/edit`) }, ...(request.status === 'Açık' || request.status === 'Atandı' ? [{ key: 'assign', icon: <UserSwitchOutlined />, label: request.status === 'Atandı' ? 'Teknisyen Değiştir' : 'Teknisyene Ata', onClick: () => open('assign') }] : []), ...(request.status === 'Atandı' ? [{ key: 'start', icon: <PlayCircleOutlined />, label: 'İşleme Al', onClick: start }] : []), ...(request.status === 'Atandı' || request.status === 'İşlemde' ? [{ key: 'complete', icon: <CheckOutlined />, label: 'Tamamla', onClick: () => open('complete') }] : []), { key: 'cancel', icon: <CloseOutlined />, danger: true, label: 'İptal Et', onClick: () => open('cancel') }] : [])]
-  return <>{mode === 'menu' ? <Dropdown menu={{ items }} placement="bottomRight" trigger={['click']}><Tooltip title="İşlemleri aç"><Button aria-label="Bakım talebi işlemlerini aç" icon={<MoreOutlined />} size="small" /></Tooltip></Dropdown> : <Space wrap><Button icon={<EyeOutlined />} onClick={() => void navigate(`/maintenance/requests/${request.id}`)}>Görüntüle</Button>{!terminal && <><Button icon={<EditOutlined />} onClick={() => void navigate(`/maintenance/requests/${request.id}/edit`)}>Düzenle</Button>{(request.status === 'Açık' || request.status === 'Atandı') && <Button icon={<UserSwitchOutlined />} onClick={() => open('assign')}>Teknisyene Ata</Button>}{request.status === 'Atandı' && <Button icon={<PlayCircleOutlined />} onClick={start}>İşleme Al</Button>}{(request.status === 'Atandı' || request.status === 'İşlemde') && <Button icon={<CheckOutlined />} onClick={() => open('complete')} type="primary">Tamamla</Button>}<Button danger icon={<CloseOutlined />} onClick={() => open('cancel')}>İptal Et</Button></>}</Space>}
-    <Modal destroyOnHidden confirmLoading={submitting} okText={action === 'cancel' ? 'İptal Et' : 'Kaydet'} onCancel={() => setAction(null)} onOk={() => void submit()} open={action !== null} title={action === 'assign' ? 'Teknisyene Ata' : action === 'complete' ? 'Bakım Talebini Tamamla' : 'Bakım Talebini İptal Et'}><Form form={form} layout="vertical" preserve={false}>{action === 'assign' && <Form.Item label="Atanan Teknisyen" name="technician" rules={[{ required: true, whitespace: true, message: 'Atanan teknisyen zorunludur.' }]}><Input /></Form.Item>}{action === 'complete' && <><Form.Item label="Gerçekleşen Tarih" name="completedAt" rules={[{ required: true, message: 'Gerçekleşen tarih zorunludur.' }]}><DatePicker format="DD.MM.YYYY HH:mm" showTime style={{ width: '100%' }} /></Form.Item><Form.Item label="Yapan Kişi" name="completedBy" rules={[{ required: true, whitespace: true, message: 'Yapan kişi zorunludur.' }]}><Input /></Form.Item><Form.Item label="Sonuç" name="result" rules={[{ required: true, whitespace: true, message: 'Sonuç zorunludur.' }]}><Input.TextArea rows={2} /></Form.Item><Form.Item label="İşlem Notu" name="workNotes" rules={[{ required: true, whitespace: true, message: 'İşlem notu zorunludur.' }]}><Input.TextArea rows={3} /></Form.Item></>}{action === 'cancel' && <Form.Item label="İptal Nedeni" name="cancellationReason" rules={[{ required: true, whitespace: true, message: 'İptal nedeni zorunludur.' }]}><Input.TextArea rows={3} /></Form.Item>}</Form></Modal>
+  const navigate = useNavigate(); const { user } = useAuth(); const { message } = AntdApp.useApp()
+  const [form] = Form.useForm<Values>(); const [action, setAction] = useState<Action | null>(null); const [submitting, setSubmitting] = useState(false); const [staff, setStaff] = useState<ItStaffMember[]>([])
+  const canManage = user?.role === 'Admin' || user?.role === 'IT'
+  const open = async (next: Action) => { form.resetFields(); if (next === 'assign') { try { setStaff(await userService.getItStaff()) } catch (error: unknown) { message.error(error instanceof Error ? error.message : 'IT personeli alınamadı.'); return } } setAction(next) }
+  const submit = async () => {
+    const values = await form.validateFields(); setSubmitting(true)
+    try {
+      if (action === 'assign') await maintenanceService.assignRequest(request.id, values.assignedToUserId!)
+      if (action === 'complete') await maintenanceService.completeRequest(request.id, { completedAt: values.completedAt!.toISOString(), result: values.result!.trim(), workNotes: values.workNotes!.trim() })
+      if (action === 'cancel') await maintenanceService.cancelRequest(request.id, values.cancellationReason!.trim())
+      message.success(action === 'assign' ? 'Talep IT personeline atandı.' : action === 'complete' ? 'Talep tamamlandı.' : 'Talep iptal edildi.')
+      setAction(null); onSuccess?.()
+    } catch (error: unknown) { message.error(error instanceof Error ? error.message : 'İşlem tamamlanamadı.') }
+    finally { setSubmitting(false) }
+  }
+  const start = async () => { try { await maintenanceService.startRequest(request.id); message.success('Talep işleme alındı.'); onSuccess?.() } catch (error: unknown) { message.error(error instanceof Error ? error.message : 'Talep işleme alınamadı.') } }
+  const items: MenuProps['items'] = [
+    { key: 'view', icon: <EyeOutlined />, label: 'Görüntüle', onClick: () => void navigate(`/support-requests/${request.id}`) },
+    ...(canManage && !['Tamamlandı', 'İptal Edildi'].includes(request.status) ? [
+      { key: 'assign', icon: <TeamOutlined />, label: 'IT Personeline Ata', onClick: () => void open('assign') },
+      ...(request.status === 'Atandı' ? [{ key: 'start', icon: <PlayCircleOutlined />, label: 'İşleme Al', onClick: () => void start() }] : []),
+      ...(request.status === 'İşlemde' ? [{ key: 'complete', icon: <CheckOutlined />, label: 'Tamamla', onClick: () => void open('complete') }] : []),
+      { key: 'cancel', icon: <CloseOutlined />, danger: true, label: 'İptal Et', onClick: () => void open('cancel') },
+    ] : []),
+  ]
+  return <>
+    {mode === 'menu' ? <Dropdown menu={{ items }} trigger={['click']}><Tooltip title="İşlemleri aç"><Button icon={<MoreOutlined />} size="small" /></Tooltip></Dropdown> : <Space><Button icon={<EyeOutlined />} onClick={() => void navigate(`/support-requests/${request.id}`)}>Görüntüle</Button>{canManage && request.status === 'Atandı' && <Button onClick={() => void start()} type="primary">İşleme Al</Button>}</Space>}
+    <Modal destroyOnHidden confirmLoading={submitting} onCancel={() => setAction(null)} onOk={() => void submit()} open={action !== null} title={action === 'assign' ? 'IT Personeline Ata' : action === 'complete' ? 'Destek Talebini Tamamla' : 'Destek Talebini İptal Et'}>
+      <Form form={form} layout="vertical" preserve={false}>
+        {action === 'assign' && <Form.Item label="IT Personeli" name="assignedToUserId" rules={[{ required: true, message: 'IT personeli seçin.' }]}><Select options={staff.map((item) => ({ value: item.userId, label: `${item.fullName} · ${item.email}` }))} /></Form.Item>}
+        {action === 'complete' && <><Form.Item label="Tamamlanma Tarihi" name="completedAt" rules={[{ required: true, message: 'Tarih zorunludur.' }]}><DatePicker showTime style={{ width: '100%' }} /></Form.Item><Form.Item label="Çözüm" name="result" rules={[{ required: true, whitespace: true, message: 'Çözüm zorunludur.' }]}><Input.TextArea rows={3} /></Form.Item><Form.Item label="Çalışma Notları" name="workNotes" rules={[{ required: true, whitespace: true, message: 'Çalışma notları zorunludur.' }]}><Input.TextArea rows={3} /></Form.Item></>}
+        {action === 'cancel' && <Form.Item label="İptal Nedeni" name="cancellationReason" rules={[{ required: true, whitespace: true, message: 'İptal nedeni zorunludur.' }]}><Input.TextArea rows={3} /></Form.Item>}
+      </Form>
+    </Modal>
   </>
 }
 export default MaintenanceRequestActions

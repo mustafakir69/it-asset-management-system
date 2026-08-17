@@ -8,11 +8,11 @@ public static class CsvExporter
 {
     public static byte[] Inventory(IEnumerable<InventoryReportDto> records) => Create(
         ["Varlık Kodu", "Kategori", "Marka", "Model", "Seri Numarası", "Durum", "Lokasyon", "Satın Alma Tarihi", "Garanti Bitiş Tarihi"],
-        records.Select(item => new[] { item.AssetCode, item.Category, item.Brand, item.Model, item.SerialNumber, item.Status, item.Location, Date(item.PurchaseDate), Date(item.WarrantyEndDate) }));
+        records.Select(item => new[] { item.AssetCode, item.Category, item.Brand, item.Model, item.SerialNumber, item.Status, item.Location, Date(item.PurchaseDate), item.WarrantyEndDate.HasValue ? Date(item.WarrantyEndDate.Value) : "" }));
 
     public static byte[] Assignments(IEnumerable<AssignmentReportDto> records) => Create(
         ["Varlık Kodu", "Cihaz", "Çalışan", "Departman", "Zimmet Tarihi", "İade Tarihi", "Durum", "Zimmetleyen", "İade Alan"],
-        records.Select(item => new[] { item.AssetCode, item.AssetName, item.EmployeeName, item.Department, DateTime(item.AssignedAt), item.ReturnedAt.HasValue ? DateTime(item.ReturnedAt.Value) : "", item.Status, item.AssignedBy, item.ReturnedBy ?? "" }));
+        records.Select(item => new[] { item.AssetCode, item.AssetName, item.EmployeeName, item.Department, DateTime(item.AssignedAt), item.ReturnedAt.HasValue ? DateTime(item.ReturnedAt.Value) : "", item.Status, item.AssignedByName, item.ReturnedByName ?? "" }));
 
     public static byte[] Stock(IEnumerable<StockReportDto> records) => Create(
         ["Ürün Kodu", "Ürün", "Kategori", "Marka / Model", "Birim", "Mevcut Stok", "Minimum Stok", "Kritik", "Lokasyon"],
@@ -20,7 +20,7 @@ public static class CsvExporter
 
     public static byte[] Maintenance(IEnumerable<MaintenanceReportDto> records) => Create(
         ["Cihaz Kodu", "Cihaz", "Bakım / Talep", "Kayıt Türü", "Planlanan Tarih", "Gerçekleşen Tarih", "Yapan Kişi", "Sonuç", "Durum"],
-        records.Select(item => new[] { item.AssetCode, item.AssetName, item.Title, item.RecordType, item.PlannedDate.HasValue ? Date(item.PlannedDate.Value) : "", item.CompletedAt.HasValue ? DateTime(item.CompletedAt.Value) : "", item.PerformedBy ?? "", item.Result ?? "", item.Status }));
+        records.Select(item => new[] { item.AssetCode, item.AssetName, item.Title, item.RecordType, item.PlannedDate.HasValue ? Date(item.PlannedDate.Value) : "", item.CompletedAt.HasValue ? DateTime(item.CompletedAt.Value) : "", item.ActorName ?? "", item.Result ?? "", item.Status }));
 
     private static byte[] Create(IEnumerable<string> headers, IEnumerable<string[]> rows)
     {

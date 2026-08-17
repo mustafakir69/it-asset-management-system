@@ -3,6 +3,7 @@ export const assetCategories = [
   'Masaüstü Bilgisayar',
   'Monitör',
   'Telefon',
+  'Tablet',
   'Yazıcı',
 ] as const
 
@@ -37,7 +38,13 @@ export interface Asset {
   status: AssetStatus
   location: AssetLocation
   purchaseDate: string
-  warrantyEndDate: string
+  warrantyEndDate: string | null
+  currentAssigneeEmployeeId: string | null
+  currentAssigneeName: string | null
+  currentAssigneeDepartment: string | null
+  currentAssignmentDate: string | null
 }
 
-export type AssetInput = Omit<Asset, 'id'>
+export type AssetInput = Pick<Asset,
+  'assetCode' | 'category' | 'brand' | 'model' | 'serialNumber' | 'status' |
+  'location' | 'purchaseDate' | 'warrantyEndDate'>

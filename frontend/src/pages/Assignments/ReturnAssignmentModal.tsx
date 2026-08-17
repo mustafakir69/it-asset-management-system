@@ -6,7 +6,6 @@ import type { Assignment, ReturnAssignmentInput } from '../../types/assignment'
 
 interface ReturnFormValues {
   returnedAt: Dayjs
-  returnedBy: string
   returnNotes?: string
 }
 
@@ -29,7 +28,6 @@ function ReturnAssignmentModal({
     if (assignment) {
       form.setFieldsValue({
         returnedAt: dayjs(),
-        returnedBy: '',
         returnNotes: '',
       })
     } else {
@@ -40,7 +38,6 @@ function ReturnAssignmentModal({
   const handleFinish = async (values: ReturnFormValues) => {
     await onSubmit({
       returnedAt: values.returnedAt.toISOString(),
-      returnedBy: values.returnedBy.trim(),
       returnNotes: values.returnNotes?.trim() || null,
     })
   }
@@ -83,14 +80,6 @@ function ReturnAssignmentModal({
               placeholder="İade tarihini seçin"
               style={{ width: '100%' }}
             />
-          </Form.Item>
-
-          <Form.Item
-            label="İade Alan"
-            name="returnedBy"
-            rules={[{ required: true, whitespace: true, message: 'İade alan personeli girin.' }]}
-          >
-            <Input placeholder="İşlemi yapan personel" />
           </Form.Item>
 
           <Form.Item label="İade Notu" name="returnNotes">

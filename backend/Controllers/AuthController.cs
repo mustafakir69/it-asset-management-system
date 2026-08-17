@@ -54,6 +54,11 @@ public sealed class AuthController(
             });
         }
 
+        if (!Enum.IsDefined(user.Role))
+        {
+            return Unauthorized(new ProblemDetails { Status = 401, Title = "Giriş başarısız", Detail = "Kullanıcı rolü artık desteklenmiyor." });
+        }
+
         user.LastLoginAt = DateTimeOffset.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -93,7 +98,6 @@ public sealed class AuthController(
         AppRole.Admin => "Sistem Yöneticisi",
         AppRole.IT => "IT Yetkilisi",
         AppRole.Employee => "Çalışan",
-        AppRole.Auditor => "Denetçi / Yönetici",
         _ => role.ToString()
     };
 }

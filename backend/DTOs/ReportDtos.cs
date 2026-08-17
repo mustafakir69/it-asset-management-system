@@ -9,7 +9,7 @@ public sealed record InventoryReportDto(
     string Status,
     string Location,
     DateOnly PurchaseDate,
-    DateOnly WarrantyEndDate);
+    DateOnly? WarrantyEndDate);
 
 public sealed record AssignmentReportDto(
     string AssetCode,
@@ -19,8 +19,8 @@ public sealed record AssignmentReportDto(
     DateTimeOffset AssignedAt,
     DateTimeOffset? ReturnedAt,
     string Status,
-    string AssignedBy,
-    string? ReturnedBy);
+    string AssignedByName,
+    string? ReturnedByName);
 
 public sealed record StockReportDto(
     string ItemCode,
@@ -39,7 +39,8 @@ public sealed record StockMovementReportDto(
     string TransactionType,
     int Quantity,
     DateTimeOffset TransactionDate,
-    string PersonName,
+    string PerformedByName,
+    string? RecipientEmployeeName,
     string? Note);
 
 public sealed record MaintenanceReportDto(
@@ -50,7 +51,7 @@ public sealed record MaintenanceReportDto(
     string RecordType,
     DateOnly? PlannedDate,
     DateTimeOffset? CompletedAt,
-    string? PerformedBy,
+    string? ActorName,
     string? Result,
     string Status);
 

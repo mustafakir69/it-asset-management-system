@@ -16,7 +16,11 @@ export interface MaintenancePlan {
   description: string | null
   frequencyDays: number
   startDate: string
-  responsibleTechnician: string
+  responsibleUserId: string
+  responsibleUserName: string
+  estimatedDurationMinutes: number
+  reminderLeadDays: number
+  nextDueAt: string
   isActive: boolean
   createdAt: string
 }
@@ -27,7 +31,9 @@ export interface MaintenancePlanInput {
   description?: string
   frequencyDays: number
   startDate: string
-  responsibleTechnician: string
+  responsibleUserId: string
+  estimatedDurationMinutes: number
+  reminderLeadDays: number
 }
 
 export interface MaintenanceTask {
@@ -42,16 +48,18 @@ export interface MaintenanceTask {
   completedDate: string | null
   status: MaintenanceStoredStatus
   displayStatus: MaintenanceTaskStatus
-  assignedTechnician: string | null
+  responsibleUserId: string
+  responsibleUserName: string
   notes: string | null
-  completedBy: string | null
+  completedByUserId: string | null
+  completedByName: string | null
   result: string | null
   workNotes: string | null
   cancellationReason: string | null
   createdAt: string
 }
 
-export interface MaintenanceTaskCompleteInput { completedDate: string; completedBy: string; result: string; workNotes: string }
+export interface MaintenanceTaskCompleteInput { completedDate: string; result: string; workNotes: string }
 export interface MaintenanceTaskRescheduleInput { plannedDate: string; workNotes: string }
 
 export interface MaintenanceRequest {
@@ -60,16 +68,20 @@ export interface MaintenanceRequest {
   assetId: string
   assetCode: string
   assetName: string
+  requestedByEmployeeId: string
+  requestedByName: string
+  requestedByDepartment: string
   title: string
   description: string
   priority: MaintenanceRequestPriority
   status: MaintenanceRequestStatus
-  requestedBy: string
-  assignedTechnician: string | null
+  assignedToUserId: string | null
+  assignedToName: string | null
   createdAt: string
   updatedAt: string
   completedAt: string | null
-  completedBy: string | null
+  completedByUserId: string | null
+  completedByName: string | null
   result: string | null
   workNotes: string | null
   cancellationReason: string | null
@@ -80,7 +92,6 @@ export interface MaintenanceRequestInput {
   title: string
   description: string
   priority: MaintenanceRequestPriority
-  requestedBy: string
 }
 
-export interface MaintenanceCompleteInput { completedAt: string; completedBy: string; result: string; workNotes: string }
+export interface MaintenanceCompleteInput { completedAt: string; result: string; workNotes: string }

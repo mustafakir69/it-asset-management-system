@@ -1,15 +1,18 @@
-import { App as AntdApp, DatePicker, Form, Input, InputNumber, Modal, Select } from 'antd'
+import { App as AntdApp, DatePicker, Form, Input, InputNumber, Modal, Select, Typography } from 'antd'
 import dayjs from 'dayjs'
 import type { Dayjs } from 'dayjs'
 import { useEffect, useState } from 'react'
+import { useAuth } from '../../contexts/useAuth'
+import { assignmentService } from '../../services/assignmentService'
 import { stockService } from '../../services/stockService'
+import type { Employee } from '../../types/assignment'
 import type { StockItem, StockTransactionInput, StockTransactionType } from '../../types/stockItem'
 
 interface StockTransactionFormValues {
   transactionType: StockTransactionType
   quantity: number
   transactionDate: Dayjs
-  personName: string
+  recipientEmployeeId?: string
   note?: string
 }
 
@@ -28,15 +31,21 @@ function StockTransactionModal({
 }: StockTransactionModalProps) {
   const [form] = Form.useForm<StockTransactionFormValues>()
   const { message } = AntdApp.useApp()
+  const { user } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const transactionType = Form.useWatch('transactionType', form)
 
   useEffect(() => {
     if (open) {
       form.setFieldsValue({ transactionType: 'Giriş', transactionDate: dayjs() })
+      void assignmentService.getEmployees().then(setEmployees).catch(() => {
+        message.error('Teslim alan çalışan listesi yüklenemedi.')
+      })
     } else {
       form.resetFields()
     }
-  }, [form, open])
+  }, [form, message, open])
 
   const handleSubmit = async (values: StockTransactionFormValues) => {
     if (!stockItem) {
@@ -47,7 +56,7 @@ function StockTransactionModal({
       transactionType: values.transactionType,
       quantity: values.quantity,
       transactionDate: values.transactionDate.startOf('day').toISOString(),
-      personName: values.personName.trim(),
+      recipientEmployeeId: values.transactionType === 'Çıkış' ? values.recipientEmployeeId : undefined,
       note: values.note?.trim() || undefined,
     }
 
@@ -112,13 +121,23 @@ function StockTransactionModal({
         >
           <DatePicker format="DD.MM.YYYY" style={{ width: '100%' }} />
         </Form.Item>
-        <Form.Item
-          label="İşlemi Yapan / Teslim Alan"
-          name="personName"
-          rules={[{ required: true, whitespace: true, message: 'Kişi adını girin.' }]}
-        >
-          <Input maxLength={150} />
-        </Form.Item>
+        <Typography.Paragraph type="secondary">
+          İşlemi yapan: <Typography.Text strong>{user?.username ?? 'Oturum kullanıcısı'}</Typography.Text>
+        </Typography.Paragraph>
+        {transactionType === 'Çıkış' && (
+          <Form.Item label="Teslim Alan Çalışan" name="recipientEmployeeId">
+            <Select
+              allowClear
+              optionFilterProp="label"
+              options={employees.map((employee) => ({
+                value: employee.id,
+                label: `${employee.employeeNo} · ${employee.fullName} · ${employee.department}`,
+              }))}
+              placeholder="Genel tüketim veya çalışan seçin"
+              showSearch
+            />
+          </Form.Item>
+        )}
         <Form.Item label="Not" name="note">
           <Input.TextArea maxLength={500} rows={3} showCount />
         </Form.Item>

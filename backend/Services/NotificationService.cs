@@ -87,6 +87,7 @@ public sealed class NotificationService(
             .ToHashSet(StringComparer.Ordinal);
         var tasks = await dbContext.MaintenanceTasks
             .Include(item => item.Asset)
+            .Include(item => item.MaintenancePlan).ThenInclude(item => item.ResponsibleUser).ThenInclude(item => item.Employee)
             .Where(item => item.Status == MaintenanceTaskStatus.Planned)
             .ToListAsync(cancellationToken);
         var createdMaintenance = new List<(MaintenanceNotification Notification, MaintenanceTask Task)>();
@@ -150,7 +151,8 @@ public sealed class NotificationService(
             ? "Yaklaşan bakım"
             : "Geciken bakım";
         var subject = $"{typeText}: {task.Asset.AssetCode}";
-        var body = $"Cihaz: {task.Asset.AssetCode} - {task.Asset.Brand} {task.Asset.Model}\nBakım: {task.Title}\nPlanlanan tarih: {task.PlannedDate:dd.MM.yyyy}\nTeknisyen: {task.TechnicianName ?? "Atanmadı"}\nBildirim türü: {typeText}";
+        var responsible = task.MaintenancePlan.ResponsibleUser.Employee?.FullName ?? task.MaintenancePlan.ResponsibleUser.Username;
+        var body = $"Cihaz: {task.Asset.AssetCode} - {task.Asset.Brand} {task.Asset.Model}\nBakım: {task.Title}\nPlanlanan tarih: {task.PlannedDate:dd.MM.yyyy}\nSorumlu: {responsible}\nBildirim türü: {typeText}";
         ApplyDeliveryResult(notification, await emailService.SendAsync(
             notification.Recipient, subject, body, cancellationToken));
     }

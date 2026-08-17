@@ -27,6 +27,7 @@ public sealed class StockService(
     public async Task<StockTransactionResult> CreateTransactionAsync(
         string stockItemId,
         StockTransactionCreateDto request,
+        string currentUserId,
         CancellationToken cancellationToken)
     {
         if (!TryParseTransactionType(request.TransactionType, out var transactionType))
@@ -65,6 +66,16 @@ public sealed class StockService(
                 ErrorMessage: $"Stok çıkışı yapılamadı. Mevcut stok {stockItem.CurrentQuantity} {stockItem.Unit}.");
         }
 
+        Employee? recipient = null;
+        if (!string.IsNullOrWhiteSpace(request.RecipientEmployeeId))
+        {
+            if (transactionType == StockTransactionType.Entry)
+                return new(StockTransactionResultStatus.InvalidTransactionType, ErrorMessage: "Stok girişinde teslim alan çalışan seçilemez.");
+            recipient = await dbContext.Employees.FirstOrDefaultAsync(x => x.Id == request.RecipientEmployeeId && x.IsActive, cancellationToken);
+            if (recipient is null)
+                return new(StockTransactionResultStatus.InvalidTransactionType, ErrorMessage: "Teslim alan aktif çalışan bulunamadı.");
+        }
+
         stockItem.CurrentQuantity += transactionType == StockTransactionType.Entry
             ? request.Quantity
             : -request.Quantity;
@@ -76,7 +87,8 @@ public sealed class StockService(
             TransactionType = transactionType,
             Quantity = request.Quantity,
             TransactionDate = request.TransactionDate!.Value,
-            PersonName = request.PersonName.Trim(),
+            PerformedByUserId = currentUserId,
+            RecipientEmployeeId = recipient?.Id,
             Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim()
         };
 
@@ -96,6 +108,8 @@ public sealed class StockService(
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
+        transaction.PerformedByUser = await dbContext.AppUsers.Include(x => x.Employee).FirstAsync(x => x.Id == currentUserId, cancellationToken);
+        transaction.RecipientEmployee = recipient;
         return new(StockTransactionResultStatus.Success, ToDto(transaction));
     }
 
@@ -106,7 +120,10 @@ public sealed class StockService(
             transaction.TransactionType == StockTransactionType.Entry ? "Giriş" : "Çıkış",
             transaction.Quantity,
             transaction.TransactionDate,
-            transaction.PersonName,
+            transaction.PerformedByUserId,
+            transaction.PerformedByUser.Employee?.FullName ?? transaction.PerformedByUser.Username,
+            transaction.RecipientEmployeeId,
+            transaction.RecipientEmployee?.FullName,
             transaction.Note);
 
     private static bool TryParseTransactionType(

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ContentCard, ErrorState, LoadingState, PageHeader, StatusTag } from '../../components'
 import { assignmentService } from '../../services/assignmentService'
+import { useAuth } from '../../contexts/useAuth'
 import type { Assignment, AssignmentStatus } from '../../types/assignment'
 import { formatDate } from '../../utils'
 
@@ -14,6 +15,7 @@ const getAssignmentStatus = (assignment: Assignment): AssignmentStatus =>
 function AssignmentDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [assignment, setAssignment] = useState<Assignment | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -65,14 +67,14 @@ function AssignmentDetailPage() {
           label: 'Zimmet Tarihi',
           children: formatDate(assignment.assignedAt),
         },
-        { key: 'assignedBy', label: 'Zimmetleyen', children: assignment.assignedBy },
+        { key: 'assignedBy', label: 'Zimmetleyen', children: assignment.assignedByName },
         { key: 'notes', label: 'Zimmet Notu', children: assignment.notes || '—', span: 2 },
         {
           key: 'returnedAt',
           label: 'İade Tarihi',
           children: assignment.returnedAt ? formatDate(assignment.returnedAt) : '—',
         },
-        { key: 'returnedBy', label: 'İade Alan', children: assignment.returnedBy || '—' },
+        { key: 'returnedBy', label: 'İade Alan', children: assignment.returnedByName || '—' },
         {
           key: 'returnNotes',
           label: 'İade Notu',
@@ -98,8 +100,11 @@ function AssignmentDetailPage() {
             : 'Zimmet kaydının temel bilgileri.'
         }
         actions={
-          <Button icon={<ArrowLeftOutlined />} onClick={() => void navigate('/assignments/history')}>
-            Zimmetlere Dön
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={() => void navigate(user?.role === 'Employee' ? '/assignments/mine' : '/assignments')}
+          >
+            {user?.role === 'Employee' ? 'Zimmetlerime Dön' : 'Zimmetlere Dön'}
           </Button>
         }
       />

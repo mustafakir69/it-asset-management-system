@@ -24,6 +24,7 @@ const mapWarrantyResponse = (value: unknown): WarrantyAsset => {
   const {
     assetId,
     assetCode,
+    assetName,
     category,
     brand,
     model,
@@ -33,11 +34,16 @@ const mapWarrantyResponse = (value: unknown): WarrantyAsset => {
     warrantyEndDate,
     remainingDays,
     warrantyStatus,
+    assetStatus,
+    currentAssigneeEmployeeId,
+    currentAssigneeName,
+    currentAssigneeDepartment,
   } = value
 
   if (
     typeof assetId !== 'string' ||
     typeof assetCode !== 'string' ||
+    typeof assetName !== 'string' ||
     typeof category !== 'string' ||
     typeof brand !== 'string' ||
     typeof model !== 'string' ||
@@ -48,6 +54,10 @@ const mapWarrantyResponse = (value: unknown): WarrantyAsset => {
     (remainingDays !== null && typeof remainingDays !== 'number') ||
     typeof warrantyStatus !== 'string' ||
     !isWarrantyStatus(warrantyStatus)
+    || typeof assetStatus !== 'string'
+    || (currentAssigneeEmployeeId !== null && typeof currentAssigneeEmployeeId !== 'string')
+    || (currentAssigneeName !== null && typeof currentAssigneeName !== 'string')
+    || (currentAssigneeDepartment !== null && typeof currentAssigneeDepartment !== 'string')
   ) {
     throw new Error('API garanti verileri beklenen formatta değil.')
   }
@@ -55,6 +65,7 @@ const mapWarrantyResponse = (value: unknown): WarrantyAsset => {
   return {
     assetId,
     assetCode,
+    assetName,
     category,
     brand,
     model,
@@ -64,6 +75,10 @@ const mapWarrantyResponse = (value: unknown): WarrantyAsset => {
     warrantyEndDate,
     remainingDays,
     warrantyStatus,
+    assetStatus,
+    currentAssigneeEmployeeId,
+    currentAssigneeName,
+    currentAssigneeDepartment,
   }
 }
 

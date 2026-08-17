@@ -7,7 +7,7 @@ using TakipProgrami.Api.Services;
 namespace TakipProgrami.Api.Controllers;
 
 [ApiController]
-[Authorize(Roles = "Admin,IT,Auditor")]
+[Authorize(Roles = "Admin,IT")]
 [Route("api/reports")]
 public sealed class ReportsController(ReportsService reportsService) : ControllerBase
 {

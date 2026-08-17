@@ -8,249 +8,84 @@ using TakipProgrami.Api.Helpers;
 
 namespace TakipProgrami.Api.Controllers;
 
-[ApiController]
-[Authorize]
-[Route("api/maintenance/requests")]
-public sealed class MaintenanceRequestsController(ApplicationDbContext dbContext) : ControllerBase
+[ApiController, Authorize, Route("api/support-requests"), Route("api/maintenance/requests")]
+public sealed class MaintenanceRequestsController(ApplicationDbContext db) : ControllerBase
 {
-    [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<MaintenanceRequestDto>>> GetAll(
-        string? status,
-        string? priority,
-        string? search,
-        CancellationToken cancellationToken)
+    [HttpGet, Authorize(Roles = "Admin,IT")]
+    public async Task<ActionResult<IReadOnlyList<MaintenanceRequestDto>>> GetAll(string? status, string? priority, string? search, CancellationToken ct)
     {
-        var requests = await dbContext.MaintenanceRequests.AsNoTracking().Include(item => item.Asset)
-            .OrderByDescending(item => item.CreatedAt).ToListAsync(cancellationToken);
-
-        var filtered = requests.AsEnumerable();
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            if (!TryParseStatus(status, out var parsedStatus)) return BadRequestProblem("Geçersiz bakım talebi durumu.");
-            filtered = filtered.Where(item => item.Status == parsedStatus);
-        }
-        if (!string.IsNullOrWhiteSpace(priority))
-        {
-            if (!TryParsePriority(priority, out var parsedPriority)) return BadRequestProblem("Geçersiz bakım talebi önceliği.");
-            filtered = filtered.Where(item => item.Priority == parsedPriority);
-        }
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var normalized = search.Trim();
-            filtered = filtered.Where(item =>
-                item.Asset.AssetCode.Contains(normalized, StringComparison.CurrentCultureIgnoreCase) ||
-                $"{item.Asset.Brand} {item.Asset.Model}".Contains(normalized, StringComparison.CurrentCultureIgnoreCase) ||
-                item.Title.Contains(normalized, StringComparison.CurrentCultureIgnoreCase) ||
-                item.RequestedBy.Contains(normalized, StringComparison.CurrentCultureIgnoreCase) ||
-                (item.AssignedTechnician?.Contains(normalized, StringComparison.CurrentCultureIgnoreCase) ?? false));
-        }
-        return Ok(filtered.Select(ToDto).ToList());
+        var query = Query();
+        if (!string.IsNullOrWhiteSpace(status)) { if (!TryStatus(status, out var parsed)) return Bad("Geçersiz destek talebi durumu."); query = query.Where(x => x.Status == parsed); }
+        if (!string.IsNullOrWhiteSpace(priority)) { if (!TryPriority(priority, out var parsed)) return Bad("Geçersiz destek talebi önceliği."); query = query.Where(x => x.Priority == parsed); }
+        if (!string.IsNullOrWhiteSpace(search)) { var s = search.Trim(); query = query.Where(x => x.Asset.AssetCode.Contains(s) || x.Title.Contains(s) || x.RequestedByEmployee.FullName.Contains(s)); }
+        return Ok(await query.OrderByDescending(x => x.CreatedAt).Select(ToDto()).ToListAsync(ct));
     }
+
+    [HttpGet("my"), Authorize(Roles = "Employee")]
+    public async Task<ActionResult<IReadOnlyList<MaintenanceRequestDto>>> My(CancellationToken ct)
+    { var employeeId = User.GetEmployeeId(); if (employeeId is null) return Forbid(); return Ok(await Query().Where(x => x.RequestedByEmployeeId == employeeId).OrderByDescending(x => x.CreatedAt).Select(ToDto()).ToListAsync(ct)); }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<MaintenanceRequestDto>> GetById(string id, CancellationToken cancellationToken)
+    public async Task<ActionResult<MaintenanceRequestDto>> GetById(string id, CancellationToken ct)
     {
-        var request = await dbContext.MaintenanceRequests.AsNoTracking().Include(item => item.Asset)
-            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
-        return request is null ? NotFound() : Ok(ToDto(request));
+        var query = Query().Where(x => x.Id == id);
+        if (User.IsInRole(nameof(AppRole.Employee))) { var employeeId = User.GetEmployeeId(); if (employeeId is null) return Forbid(); query = query.Where(x => x.RequestedByEmployeeId == employeeId); }
+        var value = await query.Select(ToDto()).FirstOrDefaultAsync(ct); return value is null ? NotFound() : Ok(value);
     }
 
-    [HttpPost]
-    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
-    public async Task<ActionResult<MaintenanceRequestDto>> Create(
-        MaintenanceRequestCreateDto input,
-        CancellationToken cancellationToken)
+    [HttpPost, Authorize(Roles = "Employee")]
+    public async Task<ActionResult<MaintenanceRequestDto>> Create(MaintenanceRequestCreateDto input, CancellationToken ct)
     {
-        if (!TryParsePriority(input.Priority, out var priority)) return BadRequestProblem("Geçersiz bakım talebi önceliği.");
-        var asset = await GetEligibleAsset(input.AssetId, cancellationToken);
-        if (asset is null) return ValidationProblem(ModelState);
+        var employeeId = User.GetEmployeeId(); if (employeeId is null) return Forbid();
+        if (!TryPriority(input.Priority, out var priority)) return Bad("Geçersiz destek talebi önceliği.");
+        var ownsAsset = await db.Assignments.AnyAsync(x => x.AssetId == input.AssetId && x.EmployeeId == employeeId && x.ReturnedAt == null, ct);
+        if (!ownsAsset) return StatusCode(403, new ProblemDetails { Status = 403, Title = "Yetkisiz cihaz", Detail = "Yalnızca size aktif zimmetli cihaz için destek talebi açabilirsiniz." });
         var now = DateTimeOffset.UtcNow;
-        var request = new MaintenanceRequest
-        {
-            Id = Guid.NewGuid().ToString("N"), AssetId = asset.Id, Asset = asset,
-            Title = input.Title.Trim(), Description = input.Description.Trim(), Priority = priority,
-            Status = MaintenanceRequestStatus.Open, RequestedBy = input.RequestedBy.Trim(),
-            CreatedAt = now, UpdatedAt = now
-        };
-        dbContext.MaintenanceRequests.Add(request);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return CreatedAtAction(nameof(GetById), new { id = request.Id }, ToDto(request));
+        var request = new MaintenanceRequest { Id = Guid.NewGuid().ToString("N"), AssetId = input.AssetId, RequestedByEmployeeId = employeeId,
+            Title = input.Title.Trim(), Description = input.Description.Trim(), Priority = priority, Status = MaintenanceRequestStatus.Open,
+            CreatedAt = now, UpdatedAt = now };
+        db.MaintenanceRequests.Add(request); await db.SaveChangesAsync(ct);
+        return CreatedAtAction(nameof(GetById), new { id = request.Id }, await Query().Where(x => x.Id == request.Id).Select(ToDto()).FirstAsync(ct));
     }
 
-    [HttpPut("{id}")]
-    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
-    public async Task<ActionResult<MaintenanceRequestDto>> Update(
-        string id,
-        MaintenanceRequestUpdateDto input,
-        CancellationToken cancellationToken)
+    [HttpPut("{id}/assign"), Authorize(Roles = "Admin,IT")]
+    public async Task<ActionResult<MaintenanceRequestDto>> Assign(string id, MaintenanceRequestAssignDto input, CancellationToken ct)
     {
-        var request = await dbContext.MaintenanceRequests.Include(item => item.Asset)
-            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
-        if (request is null) return NotFound();
-        if (IsTerminal(request.Status)) return StateConflict("Tamamlanmış veya iptal edilmiş talep düzenlenemez.");
-        if (!TryParsePriority(input.Priority, out var priority)) return BadRequestProblem("Geçersiz bakım talebi önceliği.");
-        var asset = await GetEligibleAsset(input.AssetId, cancellationToken);
-        if (asset is null) return ValidationProblem(ModelState);
-        request.AssetId = asset.Id;
-        request.Asset = asset;
-        request.Title = input.Title.Trim();
-        request.Description = input.Description.Trim();
-        request.Priority = priority;
-        request.RequestedBy = input.RequestedBy.Trim();
-        request.UpdatedAt = DateTimeOffset.UtcNow;
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return Ok(ToDto(request));
+        var request = await db.MaintenanceRequests.FirstOrDefaultAsync(x => x.Id == id, ct); if (request is null) return NotFound();
+        if (Terminal(request.Status)) return ConflictProblem("Tamamlanmış veya iptal edilmiş talep atanamaz.");
+        var assignee = await db.AppUsers.FirstOrDefaultAsync(x => x.Id == input.AssignedToUserId && x.IsActive && x.Role == AppRole.IT, ct);
+        if (assignee is null) return Bad("Talep yalnızca aktif bir IT kullanıcısına atanabilir.");
+        request.AssignedToUserId = assignee.Id; request.Status = MaintenanceRequestStatus.Assigned; request.UpdatedAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(ct); return Ok(await Dto(id, ct));
     }
 
-    [HttpPut("{id}/assign")]
-    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
-    public async Task<ActionResult<MaintenanceRequestDto>> Assign(
-        string id,
-        MaintenanceRequestAssignDto input,
-        CancellationToken cancellationToken)
-    {
-        var request = await FindTracked(id, cancellationToken);
-        if (request is null) return NotFound();
-        if (IsTerminal(request.Status)) return StateConflict("Tamamlanmış veya iptal edilmiş talep atanamaz.");
-        request.AssignedTechnician = input.AssignedTechnician.Trim();
-        request.Status = MaintenanceRequestStatus.Assigned;
-        request.UpdatedAt = DateTimeOffset.UtcNow;
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return Ok(ToDto(request));
-    }
+    [HttpPut("{id}/start"), Authorize(Roles = "Admin,IT")]
+    public async Task<ActionResult<MaintenanceRequestDto>> Start(string id, CancellationToken ct)
+    { var request = await db.MaintenanceRequests.FirstOrDefaultAsync(x => x.Id == id, ct); if (request is null) return NotFound(); if (request.Status != MaintenanceRequestStatus.Assigned) return ConflictProblem("Yalnızca atanmış talep işleme alınabilir."); request.Status = MaintenanceRequestStatus.InProgress; request.UpdatedAt = DateTimeOffset.UtcNow; await db.SaveChangesAsync(ct); return Ok(await Dto(id, ct)); }
 
-    [HttpPut("{id}/start")]
-    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
-    public async Task<ActionResult<MaintenanceRequestDto>> Start(string id, CancellationToken cancellationToken)
-    {
-        var request = await FindTracked(id, cancellationToken);
-        if (request is null) return NotFound();
-        if (request.Status != MaintenanceRequestStatus.Assigned)
-            return StateConflict("Yalnızca teknisyene atanmış talepler işleme alınabilir.");
-        request.Status = MaintenanceRequestStatus.InProgress;
-        request.UpdatedAt = DateTimeOffset.UtcNow;
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return Ok(ToDto(request));
-    }
+    [HttpPut("{id}/complete"), Authorize(Roles = "Admin,IT")]
+    public async Task<ActionResult<MaintenanceRequestDto>> Complete(string id, MaintenanceRequestCompleteDto input, CancellationToken ct)
+    { var request = await db.MaintenanceRequests.FirstOrDefaultAsync(x => x.Id == id, ct); if (request is null) return NotFound(); if (request.Status != MaintenanceRequestStatus.InProgress) return ConflictProblem("Yalnızca işlemdeki talep tamamlanabilir."); request.Status = MaintenanceRequestStatus.Completed; request.CompletedAt = input.CompletedAt!.Value; request.CompletedByUserId = User.GetUserId(); request.Result = input.Result.Trim(); request.WorkNotes = input.WorkNotes.Trim(); request.UpdatedAt = DateTimeOffset.UtcNow; await db.SaveChangesAsync(ct); return Ok(await Dto(id, ct)); }
 
-    [HttpPut("{id}/complete")]
-    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
-    public async Task<ActionResult<MaintenanceRequestDto>> Complete(
-        string id,
-        MaintenanceRequestCompleteDto input,
-        CancellationToken cancellationToken)
-    {
-        var request = await FindTracked(id, cancellationToken);
-        if (request is null) return NotFound();
-        if (IsTerminal(request.Status)) return StateConflict(request.Status == MaintenanceRequestStatus.Completed ? "Bu talep zaten tamamlanmış." : "İptal edilmiş talep tamamlanamaz.");
-        request.Status = MaintenanceRequestStatus.Completed;
-        request.CompletedAt = input.CompletedAt!.Value;
-        request.CompletedBy = input.CompletedBy.Trim();
-        request.Result = input.Result.Trim();
-        request.WorkNotes = input.WorkNotes.Trim();
-        request.UpdatedAt = DateTimeOffset.UtcNow;
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return Ok(ToDto(request));
-    }
+    [HttpPut("{id}/cancel"), Authorize(Roles = "Admin,IT")]
+    public async Task<ActionResult<MaintenanceRequestDto>> Cancel(string id, MaintenanceRequestCancelDto input, CancellationToken ct)
+    { var request = await db.MaintenanceRequests.FirstOrDefaultAsync(x => x.Id == id, ct); if (request is null) return NotFound(); if (Terminal(request.Status)) return ConflictProblem("Talep zaten kapalı."); request.Status = MaintenanceRequestStatus.Cancelled; request.CancellationReason = input.CancellationReason.Trim(); request.UpdatedAt = DateTimeOffset.UtcNow; await db.SaveChangesAsync(ct); return Ok(await Dto(id, ct)); }
 
-    [HttpPut("{id}/cancel")]
-    [Authorize(Policy = AppAuthorizationPolicies.ManagementWrite)]
-    public async Task<ActionResult<MaintenanceRequestDto>> Cancel(
-        string id,
-        MaintenanceRequestCancelDto input,
-        CancellationToken cancellationToken)
-    {
-        var request = await FindTracked(id, cancellationToken);
-        if (request is null) return NotFound();
-        if (IsTerminal(request.Status)) return StateConflict(request.Status == MaintenanceRequestStatus.Completed ? "Tamamlanmış talep iptal edilemez." : "Bu talep zaten iptal edilmiş.");
-        request.Status = MaintenanceRequestStatus.Cancelled;
-        request.CancellationReason = input.CancellationReason.Trim();
-        request.UpdatedAt = DateTimeOffset.UtcNow;
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return Ok(ToDto(request));
-    }
-
-    private Task<MaintenanceRequest?> FindTracked(string id, CancellationToken cancellationToken) =>
-        dbContext.MaintenanceRequests.Include(item => item.Asset)
-            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
-
-    private async Task<Asset?> GetEligibleAsset(string assetId, CancellationToken cancellationToken)
-    {
-        var asset = await dbContext.Assets.FirstOrDefaultAsync(item => item.Id == assetId, cancellationToken);
-        if (asset is null)
-        {
-            ModelState.AddModelError(nameof(MaintenanceRequestCreateDto.AssetId), "Seçilen cihaz bulunamadı.");
-            return null;
-        }
-        if (asset.Status is "Hurda" or "Elden çıkarıldı")
-        {
-            ModelState.AddModelError(nameof(MaintenanceRequestCreateDto.AssetId), "Hurda veya elden çıkarılmış cihaz için bakım talebi oluşturulamaz.");
-            return null;
-        }
-        return asset;
-    }
-
-    private BadRequestObjectResult BadRequestProblem(string detail) => BadRequest(new ProblemDetails
-    {
-        Status = StatusCodes.Status400BadRequest, Title = "Geçersiz istek", Detail = detail
-    });
-
-    private ConflictObjectResult StateConflict(string detail) => Conflict(new ProblemDetails
-    {
-        Status = StatusCodes.Status409Conflict, Title = "Bakım talebi durumu uygun değil", Detail = detail
-    });
-
-    private static bool IsTerminal(MaintenanceRequestStatus status) =>
-        status is MaintenanceRequestStatus.Completed or MaintenanceRequestStatus.Cancelled;
-
-    private static bool TryParsePriority(string value, out MaintenanceRequestPriority priority)
-    {
-        priority = value.Trim() switch
-        {
-            "Düşük" => MaintenanceRequestPriority.Low,
-            "Normal" => MaintenanceRequestPriority.Normal,
-            "Yüksek" => MaintenanceRequestPriority.High,
-            "Kritik" => MaintenanceRequestPriority.Critical,
-            _ => (MaintenanceRequestPriority)(-1)
-        };
-        return Enum.IsDefined(priority);
-    }
-
-    private static bool TryParseStatus(string value, out MaintenanceRequestStatus status)
-    {
-        status = value.Trim() switch
-        {
-            "Açık" => MaintenanceRequestStatus.Open,
-            "Atandı" => MaintenanceRequestStatus.Assigned,
-            "İşlemde" => MaintenanceRequestStatus.InProgress,
-            "Tamamlandı" => MaintenanceRequestStatus.Completed,
-            "İptal Edildi" => MaintenanceRequestStatus.Cancelled,
-            _ => (MaintenanceRequestStatus)(-1)
-        };
-        return Enum.IsDefined(status);
-    }
-
-    private static MaintenanceRequestDto ToDto(MaintenanceRequest request) => new(
-        request.Id, $"BT-{request.Id[..Math.Min(8, request.Id.Length)].ToUpperInvariant()}",
-        request.AssetId, request.Asset.AssetCode, $"{request.Asset.Brand} {request.Asset.Model}",
-        request.Title, request.Description, PriorityLabel(request.Priority), StatusLabel(request.Status),
-        request.RequestedBy, request.AssignedTechnician, request.CreatedAt, request.UpdatedAt,
-        request.CompletedAt, request.CompletedBy, request.Result, request.WorkNotes, request.CancellationReason);
-
-    private static string PriorityLabel(MaintenanceRequestPriority priority) => priority switch
-    {
-        MaintenanceRequestPriority.Low => "Düşük",
-        MaintenanceRequestPriority.High => "Yüksek",
-        MaintenanceRequestPriority.Critical => "Kritik",
-        _ => "Normal"
-    };
-
-    private static string StatusLabel(MaintenanceRequestStatus status) => status switch
-    {
-        MaintenanceRequestStatus.Assigned => "Atandı",
-        MaintenanceRequestStatus.InProgress => "İşlemde",
-        MaintenanceRequestStatus.Completed => "Tamamlandı",
-        MaintenanceRequestStatus.Cancelled => "İptal Edildi",
-        _ => "Açık"
-    };
+    private IQueryable<MaintenanceRequest> Query() => db.MaintenanceRequests.AsNoTracking();
+    private Task<MaintenanceRequestDto> Dto(string id, CancellationToken ct) => Query().Where(x => x.Id == id).Select(ToDto()).FirstAsync(ct);
+    private static System.Linq.Expressions.Expression<Func<MaintenanceRequest, MaintenanceRequestDto>> ToDto() => x => new(
+        x.Id, "BT-" + x.Id.Substring(0, 8).ToUpper(), x.AssetId, x.Asset.AssetCode, x.Asset.Brand + " " + x.Asset.Model,
+        x.RequestedByEmployeeId, x.RequestedByEmployee.FullName, x.RequestedByEmployee.Department, x.Title, x.Description,
+        Priority(x.Priority), Status(x.Status), x.AssignedToUserId,
+        x.AssignedToUser == null ? null : x.AssignedToUser.Employee != null ? x.AssignedToUser.Employee.FullName : x.AssignedToUser.Username,
+        x.CreatedAt, x.UpdatedAt, x.CompletedAt, x.CompletedByUserId,
+        x.CompletedByUser == null ? null : x.CompletedByUser.Employee != null ? x.CompletedByUser.Employee.FullName : x.CompletedByUser.Username,
+        x.Result, x.WorkNotes, x.CancellationReason);
+    private BadRequestObjectResult Bad(string detail) => BadRequest(new ProblemDetails { Status = 400, Title = "Geçersiz istek", Detail = detail });
+    private ConflictObjectResult ConflictProblem(string detail) => Conflict(new ProblemDetails { Status = 409, Title = "Destek talebi durumu uygun değil", Detail = detail });
+    private static bool Terminal(MaintenanceRequestStatus value) => value is MaintenanceRequestStatus.Completed or MaintenanceRequestStatus.Cancelled;
+    private static bool TryPriority(string value, out MaintenanceRequestPriority result) { result = value.Trim() switch { "Düşük" => MaintenanceRequestPriority.Low, "Normal" => MaintenanceRequestPriority.Normal, "Yüksek" => MaintenanceRequestPriority.High, "Kritik" => MaintenanceRequestPriority.Critical, _ => (MaintenanceRequestPriority)(-1) }; return Enum.IsDefined(result); }
+    private static bool TryStatus(string value, out MaintenanceRequestStatus result) { result = value.Trim() switch { "Açık" => MaintenanceRequestStatus.Open, "Atandı" => MaintenanceRequestStatus.Assigned, "İşlemde" => MaintenanceRequestStatus.InProgress, "Tamamlandı" => MaintenanceRequestStatus.Completed, "İptal Edildi" => MaintenanceRequestStatus.Cancelled, _ => (MaintenanceRequestStatus)(-1) }; return Enum.IsDefined(result); }
+    private static string Priority(MaintenanceRequestPriority value) => value switch { MaintenanceRequestPriority.Low => "Düşük", MaintenanceRequestPriority.High => "Yüksek", MaintenanceRequestPriority.Critical => "Kritik", _ => "Normal" };
+    private static string Status(MaintenanceRequestStatus value) => value switch { MaintenanceRequestStatus.Assigned => "Atandı", MaintenanceRequestStatus.InProgress => "İşlemde", MaintenanceRequestStatus.Completed => "Tamamlandı", MaintenanceRequestStatus.Cancelled => "İptal Edildi", _ => "Açık" };
 }

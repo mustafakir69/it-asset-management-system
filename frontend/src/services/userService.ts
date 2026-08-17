@@ -1,9 +1,9 @@
 import type { UserRole } from '../types/auth'
-import type { CreateUserInput, ManagedUser } from '../types/user'
+import type { CreateUserInput, ItStaffMember, ManagedUser } from '../types/user'
 import { apiClient } from './api'
 import { getApiErrorMessage } from './apiError'
 
-const roles: UserRole[] = ['Admin', 'IT', 'Employee', 'Auditor']
+const roles: UserRole[] = ['Admin', 'IT', 'Employee']
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
@@ -55,6 +55,21 @@ export const userService = {
       return mapUser(response.data)
     } catch (error: unknown) {
       throw new Error(getApiErrorMessage(error, 'Kullanıcı oluşturulamadı.'))
+    }
+  },
+
+  async getItStaff(): Promise<ItStaffMember[]> {
+    try {
+      const response = await apiClient.get<unknown>('/api/users/it-staff')
+      if (!Array.isArray(response.data)) throw new Error('IT personeli listesi geçersiz.')
+      return response.data.map((value) => {
+        if (!isRecord(value) || typeof value.userId !== 'string' || typeof value.employeeId !== 'string' || typeof value.fullName !== 'string' || typeof value.email !== 'string') {
+          throw new Error('IT personeli kaydı geçersiz.')
+        }
+        return { userId: value.userId, employeeId: value.employeeId, fullName: value.fullName, email: value.email }
+      })
+    } catch (error: unknown) {
+      throw new Error(getApiErrorMessage(error, 'IT personeli listesi alınamadı.'))
     }
   },
 }

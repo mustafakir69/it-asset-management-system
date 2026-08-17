@@ -84,7 +84,7 @@ const mapStockTransactionResponse = (value: unknown): StockTransaction => {
     throw new Error('API geçersiz bir stok hareketi döndürdü.')
   }
 
-  const { id, stockItemId, transactionType, quantity, transactionDate, personName, note } = value
+  const { id, stockItemId, transactionType, quantity, transactionDate, performedByUserId, performedByName, recipientEmployeeId, recipientEmployeeName, note } = value
 
   if (
     typeof id !== 'string' ||
@@ -94,7 +94,10 @@ const mapStockTransactionResponse = (value: unknown): StockTransaction => {
     typeof quantity !== 'number' ||
     quantity <= 0 ||
     typeof transactionDate !== 'string' ||
-    typeof personName !== 'string' ||
+    typeof performedByUserId !== 'string' ||
+    typeof performedByName !== 'string' ||
+    (recipientEmployeeId !== null && typeof recipientEmployeeId !== 'string') ||
+    (recipientEmployeeName !== null && typeof recipientEmployeeName !== 'string') ||
     (note !== null && note !== undefined && typeof note !== 'string')
   ) {
     throw new Error('API stok hareketi verileri beklenen formatta değil.')
@@ -106,7 +109,10 @@ const mapStockTransactionResponse = (value: unknown): StockTransaction => {
     transactionType,
     quantity,
     transactionDate,
-    personName,
+    performedByUserId,
+    performedByName,
+    recipientEmployeeId,
+    recipientEmployeeName,
     note: typeof note === 'string' ? note : undefined,
   }
 }

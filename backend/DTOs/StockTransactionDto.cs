@@ -6,5 +6,8 @@ public sealed record StockTransactionDto(
     string TransactionType,
     int Quantity,
     DateTimeOffset TransactionDate,
-    string PersonName,
+    string PerformedByUserId,
+    string PerformedByName,
+    string? RecipientEmployeeId,
+    string? RecipientEmployeeName,
     string? Note);

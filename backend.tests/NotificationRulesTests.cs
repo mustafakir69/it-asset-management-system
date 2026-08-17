@@ -52,10 +52,18 @@ public sealed class NotificationRulesTests
         await using var dbContext = TestInfrastructure.CreateDbContext();
         var today = new DateOnly(2026, 8, 15);
         var asset = CoreBusinessRulesTests.Asset("maintenance-asset", "Bakımda");
+        var responsibleUser = new AppUser
+        {
+            Id = "user-it", Username = "it.test", Email = "it.test@example.test",
+            PasswordHash = "test", Role = AppRole.IT, IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
         var plan = new MaintenancePlan
         {
             Id = "plan-1", AssetId = asset.Id, Asset = asset, Name = "Test Bakımı",
-            FrequencyDays = 30, StartDate = today, ResponsibleTechnician = "Test",
+            FrequencyDays = 30, StartDate = today, ResponsibleUserId = "user-it",
+            ResponsibleUser = responsibleUser, EstimatedDurationMinutes = 60,
+            ReminderLeadDays = 7, NextDueAt = today,
             IsActive = true, CreatedAt = DateTimeOffset.UtcNow
         };
         var task = new MaintenanceTask
@@ -65,7 +73,7 @@ public sealed class NotificationRulesTests
             PlannedDate = today.AddDays(2), Status = MaintenanceTaskStatus.Planned,
             CreatedAt = DateTimeOffset.UtcNow
         };
-        dbContext.AddRange(asset, plan, task);
+        dbContext.AddRange(asset, responsibleUser, plan, task);
         await dbContext.SaveChangesAsync();
         var email = new FakeEmailService();
         var service = TestInfrastructure.CreateNotificationService(dbContext, email);

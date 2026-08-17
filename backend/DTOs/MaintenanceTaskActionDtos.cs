@@ -7,10 +7,6 @@ public sealed class MaintenanceTaskCompleteDto
     [Required(ErrorMessage = "Gerçekleşen tarih zorunludur.")]
     public DateOnly? CompletedDate { get; init; }
 
-    [Required(ErrorMessage = "Bakımı yapan kişi zorunludur.")]
-    [StringLength(150)]
-    public string CompletedBy { get; init; } = string.Empty;
-
     [Required(ErrorMessage = "Bakım sonucu zorunludur.")]
     [StringLength(1000)]
     public string Result { get; init; } = string.Empty;

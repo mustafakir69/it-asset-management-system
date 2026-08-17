@@ -170,8 +170,8 @@ function AssignmentsPage() {
     },
     {
       title: 'Zimmetleyen',
-      dataIndex: 'assignedBy',
-      key: 'assignedBy',
+      dataIndex: 'assignedByName',
+      key: 'assignedByName',
       ellipsis: true,
       responsive: ['xl'],
       width: 135,

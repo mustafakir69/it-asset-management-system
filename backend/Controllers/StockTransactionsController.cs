@@ -8,7 +8,7 @@ using TakipProgrami.Api.Entities;
 namespace TakipProgrami.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = "Admin,IT")]
 [Route("api/stock-transactions")]
 public sealed class StockTransactionsController(ApplicationDbContext dbContext) : ControllerBase
 {
@@ -29,7 +29,10 @@ public sealed class StockTransactionsController(ApplicationDbContext dbContext) 
                 transaction.TransactionType == StockTransactionType.Entry ? "Giriş" : "Çıkış",
                 transaction.Quantity,
                 transaction.TransactionDate,
-                transaction.PersonName,
+                transaction.PerformedByUserId,
+                transaction.PerformedByUser.Employee != null ? transaction.PerformedByUser.Employee.FullName : transaction.PerformedByUser.Username,
+                transaction.RecipientEmployeeId,
+                transaction.RecipientEmployee == null ? null : transaction.RecipientEmployee.FullName,
                 transaction.Note))
             .ToListAsync(cancellationToken);
 

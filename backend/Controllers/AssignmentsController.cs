@@ -13,6 +13,7 @@ namespace TakipProgrami.Api.Controllers;
 public sealed class AssignmentsController(AssignmentService assignmentService) : ControllerBase
 {
     [HttpGet]
+    [Authorize(Roles = "Admin,IT")]
     [ProducesResponseType<IReadOnlyList<AssignmentDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<AssignmentDto>>> GetActive(
         string? search,
@@ -21,6 +22,7 @@ public sealed class AssignmentsController(AssignmentService assignmentService) :
         Ok(await assignmentService.GetActiveAsync(search, department, cancellationToken));
 
     [HttpGet("history")]
+    [Authorize(Roles = "Admin,IT")]
     [ProducesResponseType<IReadOnlyList<AssignmentDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<IReadOnlyList<AssignmentDto>>> GetHistory(
@@ -65,7 +67,9 @@ public sealed class AssignmentsController(AssignmentService assignmentService) :
         CancellationToken cancellationToken)
     {
         var assignment = await assignmentService.GetByIdAsync(id, cancellationToken);
-        return assignment is null ? NotFound() : Ok(assignment);
+        if (assignment is null) return NotFound();
+        if (User.IsInRole("Employee") && assignment.EmployeeId != User.GetEmployeeId()) return Forbid();
+        return Ok(assignment);
     }
 
     [HttpPost]
@@ -77,7 +81,9 @@ public sealed class AssignmentsController(AssignmentService assignmentService) :
         AssignmentCreateDto request,
         CancellationToken cancellationToken)
     {
-        var result = await assignmentService.CreateAsync(request, cancellationToken);
+        var userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await assignmentService.CreateAsync(request, userId, cancellationToken);
         return result.Status switch
         {
             AssignmentOperationStatus.Success => CreatedAtAction(
@@ -106,7 +112,9 @@ public sealed class AssignmentsController(AssignmentService assignmentService) :
         AssignmentReturnDto request,
         CancellationToken cancellationToken)
     {
-        var result = await assignmentService.ReturnAsync(id, request, cancellationToken);
+        var userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await assignmentService.ReturnAsync(id, request, userId, cancellationToken);
         return result.Status switch
         {
             AssignmentOperationStatus.Success => Ok(result.Assignment),

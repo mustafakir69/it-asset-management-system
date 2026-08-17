@@ -33,7 +33,10 @@ export interface StockTransaction {
   transactionType: StockTransactionType
   quantity: number
   transactionDate: string
-  personName: string
+  performedByUserId: string
+  performedByName: string
+  recipientEmployeeId: string | null
+  recipientEmployeeName: string | null
   note?: string
 }
 
@@ -46,6 +49,6 @@ export interface StockTransactionInput {
   transactionType: StockTransactionType
   quantity: number
   transactionDate: string
-  personName: string
+  recipientEmployeeId?: string
   note?: string
 }

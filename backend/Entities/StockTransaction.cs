@@ -13,7 +13,10 @@ public sealed class StockTransaction
     public StockTransactionType TransactionType { get; set; }
     public int Quantity { get; set; }
     public DateTimeOffset TransactionDate { get; set; }
-    public string PersonName { get; set; } = string.Empty;
+    public string PerformedByUserId { get; set; } = string.Empty;
+    public string? RecipientEmployeeId { get; set; }
     public string? Note { get; set; }
     public StockItem StockItem { get; set; } = null!;
+    public AppUser PerformedByUser { get; set; } = null!;
+    public Employee? RecipientEmployee { get; set; }
 }

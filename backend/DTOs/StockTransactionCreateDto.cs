@@ -13,9 +13,7 @@ public sealed class StockTransactionCreateDto
     [Required(ErrorMessage = "İşlem tarihi zorunludur.")]
     public DateTimeOffset? TransactionDate { get; init; }
 
-    [Required(ErrorMessage = "İşlemi yapan veya teslim alan kişi zorunludur.")]
-    [MaxLength(150, ErrorMessage = "Kişi adı en fazla 150 karakter olabilir.")]
-    public string PersonName { get; init; } = string.Empty;
+    public string? RecipientEmployeeId { get; init; }
 
     [MaxLength(500, ErrorMessage = "Not en fazla 500 karakter olabilir.")]
     public string? Note { get; init; }

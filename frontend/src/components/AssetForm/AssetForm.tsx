@@ -35,7 +35,6 @@ export interface AssetFormProps {
 }
 
 const categoryOptions = assetCategories.map((category) => ({ label: category, value: category }))
-const statusOptions = assetStatuses.map((status) => ({ label: status, value: status }))
 const locationOptions = assetLocations.map((location) => ({ label: location, value: location }))
 
 function AssetForm({
@@ -46,6 +45,9 @@ function AssetForm({
   onSubmit,
 }: AssetFormProps) {
   const [form] = Form.useForm<AssetFormValues>()
+  const statusOptions = assetStatuses
+    .filter((status) => status !== 'Zimmetli' || initialValues?.status === 'Zimmetli')
+    .map((status) => ({ label: status, value: status }))
 
   useEffect(() => {
     form.resetFields()
@@ -150,7 +152,11 @@ function AssetForm({
             name="status"
             rules={[{ required: true, message: 'Cihaz durumunu seçin.' }]}
           >
-            <Select<AssetStatus> options={statusOptions} placeholder="Durum seçin" />
+            <Select<AssetStatus>
+              disabled={initialValues?.status === 'Zimmetli'}
+              options={statusOptions}
+              placeholder="Durum seçin"
+            />
           </Form.Item>
         </Col>
 

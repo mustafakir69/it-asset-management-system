@@ -55,6 +55,13 @@ function AssetDetailPage() {
         { key: 'model', label: 'Model', children: asset.model },
         { key: 'serialNumber', label: 'Seri Numarası', children: asset.serialNumber },
         { key: 'status', label: 'Durum', children: <StatusTag status={asset.status} /> },
+        ...(asset.status === 'Zimmetli' && asset.currentAssigneeName
+          ? [
+              { key: 'assignee', label: 'Zimmetli Çalışan', children: asset.currentAssigneeName },
+              { key: 'assigneeDepartment', label: 'Departman', children: asset.currentAssigneeDepartment ?? '—' },
+              { key: 'assignmentDate', label: 'Zimmet Tarihi', children: formatDate(asset.currentAssignmentDate) },
+            ]
+          : []),
         { key: 'location', label: 'Lokasyon', children: asset.location },
         {
           key: 'purchaseDate',

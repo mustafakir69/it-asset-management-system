@@ -15,8 +15,10 @@ export interface Assignment {
   department: string
   assignedAt: string
   returnedAt: string | null
-  assignedBy: string
-  returnedBy: string | null
+  assignedByUserId: string
+  assignedByName: string
+  returnedByUserId: string | null
+  returnedByName: string | null
   notes: string | null
   returnNotes: string | null
   isActive: boolean
@@ -36,12 +38,10 @@ export interface CreateAssignmentInput {
   assetId: string
   employeeId: string
   assignedAt: string
-  assignedBy: string
   notes: string | null
 }
 
 export interface ReturnAssignmentInput {
   returnedAt: string
-  returnedBy: string
   returnNotes: string | null
 }

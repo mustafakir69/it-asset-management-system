@@ -18,7 +18,7 @@ function MaintenancePlansPage() {
   const columns: TableColumnsType<MaintenancePlan> = [
     { title: 'Cihaz', key: 'asset', width: 200, sorter: (a, b) => a.assetCode.localeCompare(b.assetCode, 'tr-TR'), render: (_value, plan) => <Space direction="vertical" size={0}><Typography.Text strong>{plan.assetCode}</Typography.Text><Typography.Text type="secondary">{plan.assetName}</Typography.Text></Space> },
     { title: 'Plan Adı', dataIndex: 'name', key: 'name', width: 175, ellipsis: true, sorter: (a, b) => a.name.localeCompare(b.name, 'tr-TR') },
-    { title: 'Sorumlu IT Personeli', dataIndex: 'responsibleTechnician', key: 'responsibleTechnician', width: 150, ellipsis: true },
+    { title: 'Sorumlu IT Personeli', dataIndex: 'responsibleUserName', key: 'responsibleUserName', width: 150, ellipsis: true },
     { title: 'Bakım Sıklığı', dataIndex: 'frequencyDays', key: 'frequencyDays', align: 'center', width: 115, sorter: (a, b) => a.frequencyDays - b.frequencyDays, render: (value: number) => `${value} gün` },
     { title: 'Başlangıç Tarihi', dataIndex: 'startDate', key: 'startDate', align: 'center', width: 125, sorter: (a, b) => a.startDate.localeCompare(b.startDate), render: (value: string) => formatDate(value) },
     { title: 'Aktif/Pasif', dataIndex: 'isActive', key: 'isActive', align: 'center', width: 100, render: (value: boolean) => <StatusTag status={value ? 'Aktif' : 'Pasif'} /> },

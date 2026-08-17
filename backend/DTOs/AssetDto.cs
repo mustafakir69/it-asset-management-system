@@ -10,4 +10,8 @@ public sealed record AssetDto(
     string Status,
     string Location,
     DateOnly PurchaseDate,
-    DateOnly WarrantyEndDate);
+    DateOnly? WarrantyEndDate,
+    string? CurrentAssigneeEmployeeId,
+    string? CurrentAssigneeName,
+    string? CurrentAssigneeDepartment,
+    DateTimeOffset? CurrentAssignmentDate);

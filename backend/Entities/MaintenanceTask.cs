@@ -17,14 +17,14 @@ public sealed class MaintenanceTask
     public DateOnly PlannedDate { get; set; }
     public DateOnly? CompletedDate { get; set; }
     public MaintenanceTaskStatus Status { get; set; }
-    public string? TechnicianName { get; set; }
     public string? Notes { get; set; }
-    public string? CompletedBy { get; set; }
+    public string? CompletedByUserId { get; set; }
     public string? Result { get; set; }
     public string? WorkNotes { get; set; }
     public string? CancellationReason { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public MaintenancePlan MaintenancePlan { get; set; } = null!;
     public Asset Asset { get; set; } = null!;
+    public AppUser? CompletedByUser { get; set; }
     public ICollection<MaintenanceNotification> Notifications { get; set; } = [];
 }

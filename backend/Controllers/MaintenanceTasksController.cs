@@ -9,14 +9,14 @@ using TakipProgrami.Api.Helpers;
 namespace TakipProgrami.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = "Admin,IT")]
 [Route("api/maintenance/tasks")]
 public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<MaintenanceTaskDto>>> GetAll(CancellationToken cancellationToken)
     {
-        var tasks = await dbContext.MaintenanceTasks.AsNoTracking().Include(task => task.Asset)
+        var tasks = await dbContext.MaintenanceTasks.AsNoTracking().Include(task => task.Asset).Include(task => task.MaintenancePlan).ThenInclude(x => x.ResponsibleUser).ThenInclude(x => x.Employee).Include(task => task.CompletedByUser).ThenInclude(x => x!.Employee)
             .OrderBy(task => task.PlannedDate).ToListAsync(cancellationToken);
         var today = DateOnly.FromDateTime(DateTime.Today);
         return Ok(tasks.Select(task => ToDto(task, today)).ToList());
@@ -25,7 +25,7 @@ public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) :
     [HttpGet("{id}")]
     public async Task<ActionResult<MaintenanceTaskDto>> GetById(string id, CancellationToken cancellationToken)
     {
-        var task = await dbContext.MaintenanceTasks.AsNoTracking().Include(item => item.Asset)
+        var task = await dbContext.MaintenanceTasks.AsNoTracking().Include(item => item.Asset).Include(item => item.MaintenancePlan).ThenInclude(x => x.ResponsibleUser).ThenInclude(x => x.Employee).Include(item => item.CompletedByUser).ThenInclude(x => x!.Employee)
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         return task is null ? NotFound() : Ok(ToDto(task, DateOnly.FromDateTime(DateTime.Today)));
     }
@@ -46,7 +46,7 @@ public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) :
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         task.Status = MaintenanceTaskStatus.Completed;
         task.CompletedDate = request.CompletedDate!.Value;
-        task.CompletedBy = request.CompletedBy.Trim();
+        task.CompletedByUserId = User.GetUserId();
         task.Result = request.Result.Trim();
         task.WorkNotes = request.WorkNotes.Trim();
 
@@ -66,7 +66,6 @@ public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) :
                     AssetId = task.AssetId, Title = task.MaintenancePlan.Name,
                     Description = task.MaintenancePlan.Description, PlannedDate = nextDate,
                     Status = MaintenanceTaskStatus.Planned,
-                    TechnicianName = task.MaintenancePlan.ResponsibleTechnician,
                     CreatedAt = DateTimeOffset.UtcNow
                 });
             }
@@ -74,7 +73,7 @@ public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) :
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return Ok(ToDto(task, DateOnly.FromDateTime(DateTime.Today)));
+        return Ok(await GetDto(task.Id, cancellationToken));
     }
 
     [HttpPut("{id}/cancel")]
@@ -84,7 +83,7 @@ public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) :
         MaintenanceTaskCancelDto request,
         CancellationToken cancellationToken)
     {
-        var task = await dbContext.MaintenanceTasks.Include(item => item.Asset)
+        var task = await dbContext.MaintenanceTasks.Include(item => item.Asset).Include(item => item.MaintenancePlan).ThenInclude(x => x.ResponsibleUser).ThenInclude(x => x.Employee).Include(item => item.CompletedByUser).ThenInclude(x => x!.Employee)
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (task is null) return NotFound();
         if (task.Status != MaintenanceTaskStatus.Planned)
@@ -102,7 +101,7 @@ public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) :
         MaintenanceTaskRescheduleDto request,
         CancellationToken cancellationToken)
     {
-        var task = await dbContext.MaintenanceTasks.Include(item => item.Asset)
+        var task = await dbContext.MaintenanceTasks.Include(item => item.Asset).Include(item => item.MaintenancePlan).ThenInclude(x => x.ResponsibleUser).ThenInclude(x => x.Employee).Include(item => item.CompletedByUser).ThenInclude(x => x!.Employee)
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (task is null) return NotFound();
         if (task.Status != MaintenanceTaskStatus.Planned)
@@ -129,8 +128,15 @@ public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) :
         task.Id, task.MaintenancePlanId, task.AssetId, task.Asset.AssetCode,
         $"{task.Asset.Brand} {task.Asset.Model}", task.Title, task.Description,
         task.PlannedDate, task.CompletedDate, StoredStatus(task.Status), DisplayStatus(task, today),
-        task.TechnicianName, task.Notes, task.CompletedBy, task.Result, task.WorkNotes,
+        task.MaintenancePlan.ResponsibleUserId,
+        task.MaintenancePlan.ResponsibleUser.Employee?.FullName ?? task.MaintenancePlan.ResponsibleUser.Username,
+        task.Notes, task.CompletedByUserId,
+        task.CompletedByUser == null ? null : task.CompletedByUser.Employee?.FullName ?? task.CompletedByUser.Username,
+        task.Result, task.WorkNotes,
         task.CancellationReason, task.CreatedAt);
+
+    private async Task<MaintenanceTaskDto> GetDto(string id, CancellationToken ct) =>
+        ToDto(await dbContext.MaintenanceTasks.AsNoTracking().Include(x => x.Asset).Include(x => x.MaintenancePlan).ThenInclude(x => x.ResponsibleUser).ThenInclude(x => x.Employee).Include(x => x.CompletedByUser).ThenInclude(x => x!.Employee).FirstAsync(x => x.Id == id, ct), DateOnly.FromDateTime(DateTime.Today));
 
     private static string StoredStatus(MaintenanceTaskStatus status) => status switch
     {

@@ -21,6 +21,11 @@ public class MaintenancePlanCreateDto
     public DateOnly? StartDate { get; init; }
 
     [Required(ErrorMessage = "Sorumlu IT personeli zorunludur.")]
-    [StringLength(150, ErrorMessage = "Sorumlu IT personeli en fazla 150 karakter olabilir.")]
-    public string ResponsibleTechnician { get; init; } = string.Empty;
+    public string ResponsibleUserId { get; init; } = string.Empty;
+
+    [Range(1, 1440, ErrorMessage = "Tahmini süre 1-1440 dakika arasında olmalıdır.")]
+    public int EstimatedDurationMinutes { get; init; }
+
+    [Range(0, 365, ErrorMessage = "Hatırlatma günü 0-365 arasında olmalıdır.")]
+    public int ReminderLeadDays { get; init; }
 }

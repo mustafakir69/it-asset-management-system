@@ -88,7 +88,8 @@ function StockItemDetailPage() {
       width: 120,
       render: (value: string) => formatDate(value),
     },
-    { title: 'İşlemi Yapan / Teslim Alan', dataIndex: 'personName', key: 'personName', ellipsis: true, width: 185 },
+    { title: 'İşlemi Yapan', dataIndex: 'performedByName', key: 'performedByName', ellipsis: true, width: 160 },
+    { title: 'Teslim Alan', dataIndex: 'recipientEmployeeName', key: 'recipientEmployeeName', ellipsis: true, width: 160, render: (value: string | null) => value ?? '—' },
     { title: 'Not', dataIndex: 'note', key: 'note', ellipsis: true, render: (value?: string) => value || '—' },
   ]
 

@@ -18,8 +18,8 @@ export interface AssignmentReportItem {
   assignedAt: string
   returnedAt: string | null
   status: string
-  assignedBy: string
-  returnedBy: string | null
+  assignedByName: string
+  returnedByName: string | null
 }
 
 export interface StockReportItem {
@@ -42,7 +42,7 @@ export interface MaintenanceReportItem {
   recordType: string
   plannedDate: string | null
   completedAt: string | null
-  performedBy: string | null
+  actorName: string | null
   result: string | null
   status: string
 }

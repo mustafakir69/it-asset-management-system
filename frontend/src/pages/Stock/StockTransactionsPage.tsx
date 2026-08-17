@@ -59,7 +59,7 @@ function StockTransactionsPage() {
     return transactions.filter((transaction) => {
       const matchesSearch =
         normalizedSearch.length === 0 ||
-        [transaction.itemCode, transaction.itemName, transaction.personName].some((value) =>
+        [transaction.itemCode, transaction.itemName, transaction.performedByName, transaction.recipientEmployeeName ?? ''].some((value) =>
           value.toLocaleLowerCase('tr-TR').includes(normalizedSearch),
         )
       const transactionDate = new Date(transaction.transactionDate).getTime()
@@ -113,9 +113,15 @@ function StockTransactionsPage() {
     },
     { title: 'Miktar', dataIndex: 'quantity', key: 'quantity', align: 'center', width: 80 },
     {
-      title: 'İşlemi Yapan / Teslim Alan',
-      dataIndex: 'personName',
-      key: 'personName',
+      title: 'İşlemi Yapan',
+      dataIndex: 'performedByName',
+      key: 'performedByName',
+    },
+    {
+      title: 'Teslim Alan',
+      dataIndex: 'recipientEmployeeName',
+      key: 'recipientEmployeeName',
+      render: (value: string | null) => value ?? '—',
       ellipsis: true,
       width: 180,
     },

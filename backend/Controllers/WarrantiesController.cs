@@ -8,7 +8,7 @@ using TakipProgrami.Api.Helpers;
 namespace TakipProgrami.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = "Admin,IT")]
 [Route("api/warranties")]
 public sealed class WarrantiesController(ApplicationDbContext dbContext) : ControllerBase
 {
@@ -31,6 +31,10 @@ public sealed class WarrantiesController(ApplicationDbContext dbContext) : Contr
                 asset.Location,
                 asset.PurchaseDate,
                 asset.WarrantyEndDate
+                ,asset.Status,
+                CurrentAssigneeEmployeeId = asset.Assignments.Where(x => x.ReturnedAt == null).Select(x => x.EmployeeId).FirstOrDefault(),
+                CurrentAssigneeName = asset.Assignments.Where(x => x.ReturnedAt == null).Select(x => x.Employee.FullName).FirstOrDefault(),
+                CurrentAssigneeDepartment = asset.Assignments.Where(x => x.ReturnedAt == null).Select(x => x.Employee.Department).FirstOrDefault()
             })
             .ToListAsync(cancellationToken);
 
@@ -46,6 +50,10 @@ public sealed class WarrantiesController(ApplicationDbContext dbContext) : Contr
                 asset.Location,
                 asset.PurchaseDate,
                 asset.WarrantyEndDate,
+                asset.Status,
+                asset.CurrentAssigneeEmployeeId,
+                asset.CurrentAssigneeName,
+                asset.CurrentAssigneeDepartment,
                 today))
             .ToList();
 
@@ -62,6 +70,10 @@ public sealed class WarrantiesController(ApplicationDbContext dbContext) : Contr
         string location,
         DateOnly purchaseDate,
         DateOnly? warrantyEndDate,
+        string assetStatus,
+        string? currentAssigneeEmployeeId,
+        string? currentAssigneeName,
+        string? currentAssigneeDepartment,
         DateOnly today)
     {
         var calculation = WarrantyRules.Calculate(warrantyEndDate, today);
@@ -69,6 +81,7 @@ public sealed class WarrantiesController(ApplicationDbContext dbContext) : Contr
         return new WarrantyAssetDto(
             assetId,
             assetCode,
+            brand + " " + model,
             category,
             brand,
             model,
@@ -77,6 +90,10 @@ public sealed class WarrantiesController(ApplicationDbContext dbContext) : Contr
             purchaseDate,
             warrantyEndDate,
             calculation.RemainingDays,
-            calculation.Status);
+            calculation.Status,
+            assetStatus,
+            currentAssigneeEmployeeId,
+            currentAssigneeName,
+            currentAssigneeDepartment);
     }
 }

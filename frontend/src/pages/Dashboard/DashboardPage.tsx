@@ -3,8 +3,9 @@ import { Col, Flex, List, Row, Statistic, Typography } from 'antd'
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { ContentCard, EmptyState, ErrorState, LoadingState, PageHeader, StatusTag } from '../../components'
+import { useAuth } from '../../contexts/useAuth'
 import { dashboardService } from '../../services/dashboardService'
-import type { DashboardSummary, DashboardSummaryKey } from '../../types/dashboard'
+import type { DashboardSummary, DashboardSummaryKey, EmployeeDashboardSummary } from '../../types/dashboard'
 import { formatDate } from '../../utils'
 import './DashboardPage.css'
 
@@ -23,7 +24,7 @@ const summaryPresentations: Record<DashboardSummaryKey, SummaryPresentation> = {
 const summaryKeys = Object.keys(summaryPresentations) as DashboardSummaryKey[]
 const dateTimeOptions: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }
 
-function DashboardPage() {
+function CompanyDashboard() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -49,6 +50,41 @@ function DashboardPage() {
       <Col xs={24} xl={12}><ContentCard title="Yaklaşan / Geciken Bakımlar"><List dataSource={summary.upcomingMaintenance} locale={{ emptyText: 'Yaklaşan veya geciken bakım bulunmuyor.' }} renderItem={(item) => <List.Item className="dashboard-list-item"><div className="dashboard-list-main"><Flex align="center" gap={8} justify="space-between" wrap="wrap"><Typography.Text strong>{item.title}</Typography.Text><StatusTag status={item.status} /></Flex><Typography.Text className="dashboard-item-code" type="secondary">{item.assetCode} · {item.assetName}</Typography.Text><Typography.Text type="secondary">Planlanan tarih: {formatDate(item.plannedDate)}</Typography.Text></div></List.Item>} /></ContentCard></Col>
     </Row>
   </section>
+}
+
+function EmployeeDashboard() {
+  const [summary, setSummary] = useState<EmployeeDashboardSummary | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const load = useCallback(async () => {
+    setLoading(true); setError(null)
+    try { setSummary(await dashboardService.getMySummary()) }
+    catch (loadError: unknown) { setError(loadError instanceof Error ? loadError.message : 'Dashboard yüklenemedi.') }
+    finally { setLoading(false) }
+  }, [])
+  useEffect(() => { void load() }, [load])
+  if (loading) return <LoadingState message="Kişisel dashboard yükleniyor..." />
+  if (error) return <ErrorState message={error} onRetry={() => void load()} />
+  if (!summary) return <EmptyState description="Kişisel dashboard verisi bulunamadı." />
+  const warranty = summary.myAssetsWarrantySummary
+  return <section className="dashboard-page">
+    <PageHeader title="Dashboard" description="Zimmetli cihazlarınız ve teknik destek talepleriniz." />
+    <Row className="dashboard-summary-grid" gutter={[16, 16]}>
+      <Col xs={24} sm={12} xl={6}><ContentCard><Statistic title="Zimmetli Cihazlarım" value={summary.activeAssignmentCount} /></ContentCard></Col>
+      <Col xs={24} sm={12} xl={6}><ContentCard><Statistic title="Açık Destek Talebim" value={summary.openSupportRequestCount} /></ContentCard></Col>
+      <Col xs={24} sm={12} xl={6}><ContentCard><Statistic title="İşlemdeki Talebim" value={summary.inProgressSupportRequestCount} /></ContentCard></Col>
+      <Col xs={24} sm={12} xl={6}><ContentCard><Statistic title="Yaklaşan Garanti" value={warranty.expiringSoon} /></ContentCard></Col>
+    </Row>
+    <Row gutter={[16, 16]}>
+      <Col xs={24} xl={12}><ContentCard title="Cihazlarım"><List dataSource={summary.myAssets} locale={{ emptyText: 'Aktif zimmetli cihazınız bulunmuyor.' }} renderItem={(item) => <List.Item><div><Typography.Text strong>{item.assetCode} · {item.assetName}</Typography.Text><br /><Typography.Text type="secondary">{item.category} · Zimmet: {formatDate(item.assignedAt)}</Typography.Text></div></List.Item>} /></ContentCard></Col>
+      <Col xs={24} xl={12}><ContentCard title="Son Teknik Destek Taleplerim"><List dataSource={summary.recentSupportRequests} locale={{ emptyText: 'Destek talebiniz bulunmuyor.' }} renderItem={(item) => <List.Item><div><Typography.Text strong>{item.requestNumber} · {item.title}</Typography.Text><br /><Typography.Text type="secondary">{item.status} · {formatDate(item.updatedAt)}</Typography.Text></div></List.Item>} /></ContentCard></Col>
+    </Row>
+  </section>
+}
+
+function DashboardPage() {
+  const { user } = useAuth()
+  return user?.role === 'Employee' ? <EmployeeDashboard /> : <CompanyDashboard />
 }
 
 export default DashboardPage

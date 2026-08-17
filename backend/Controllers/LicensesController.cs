@@ -10,7 +10,7 @@ using TakipProgrami.Api.Helpers;
 namespace TakipProgrami.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = "Admin,IT")]
 [Route("api/licenses")]
 public sealed class LicensesController(ApplicationDbContext dbContext) : ControllerBase
 {

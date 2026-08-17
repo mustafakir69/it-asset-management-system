@@ -65,3 +65,28 @@ export interface DashboardSummary {
   criticalStock: DashboardStock[]
   upcomingMaintenance: DashboardMaintenance[]
 }
+
+export interface EmployeeDashboardAsset {
+  assetId: string
+  assetCode: string
+  assetName: string
+  category: string
+  assignedAt: string
+}
+
+export interface EmployeeDashboardSupport {
+  id: string
+  requestNumber: string
+  title: string
+  status: string
+  updatedAt: string
+}
+
+export interface EmployeeDashboardSummary {
+  activeAssignmentCount: number
+  myAssets: EmployeeDashboardAsset[]
+  openSupportRequestCount: number
+  inProgressSupportRequestCount: number
+  recentSupportRequests: EmployeeDashboardSupport[]
+  myAssetsWarrantySummary: { active: number; expiringSoon: number; expired: number; unknown: number }
+}

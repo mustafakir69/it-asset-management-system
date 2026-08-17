@@ -14,7 +14,6 @@ interface AssignmentFormValues {
   assetId: string
   employeeId: string
   assignedAt: Dayjs
-  assignedBy: string
   notes?: string
 }
 
@@ -61,7 +60,6 @@ function AssignmentCreatePage() {
       assetId: values.assetId,
       employeeId: values.employeeId,
       assignedAt: values.assignedAt.toISOString(),
-      assignedBy: values.assignedBy.trim(),
       notes: values.notes?.trim() || null,
     }
 
@@ -161,16 +159,6 @@ function AssignmentCreatePage() {
                     format="DD.MM.YYYY"
                     placeholder="Zimmet tarihini seçin"
                   />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} md={12}>
-                <Form.Item
-                  label="Zimmetleyen"
-                  name="assignedBy"
-                  rules={[{ required: true, whitespace: true, message: 'Zimmetleyeni girin.' }]}
-                >
-                  <Input placeholder="İşlemi yapan personel" />
                 </Form.Item>
               </Col>
 

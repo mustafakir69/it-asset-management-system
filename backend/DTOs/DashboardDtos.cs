@@ -49,3 +49,15 @@ public sealed record DashboardMaintenanceDto(
     string Title,
     DateOnly PlannedDate,
     string Status);
+
+public sealed record EmployeeDashboardDto(
+    int ActiveAssignmentCount,
+    IReadOnlyList<EmployeeDashboardAssetDto> MyAssets,
+    int OpenSupportRequestCount,
+    int InProgressSupportRequestCount,
+    IReadOnlyList<EmployeeDashboardSupportDto> RecentSupportRequests,
+    EmployeeWarrantySummaryDto MyAssetsWarrantySummary);
+
+public sealed record EmployeeDashboardAssetDto(string AssetId, string AssetCode, string AssetName, string Category, DateTimeOffset AssignedAt);
+public sealed record EmployeeDashboardSupportDto(string Id, string RequestNumber, string Title, string Status, DateTimeOffset UpdatedAt);
+public sealed record EmployeeWarrantySummaryDto(int Active, int ExpiringSoon, int Expired, int Unknown);

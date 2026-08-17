@@ -6,7 +6,7 @@ using TakipProgrami.Api.Services;
 namespace TakipProgrami.Api.Controllers;
 
 [ApiController]
-[Authorize(Roles = "Admin,Auditor")]
+[Authorize(Roles = "Admin")]
 [Route("api/audit-logs")]
 public sealed class AuditLogsController(AuditLogService auditLogService) : ControllerBase
 {

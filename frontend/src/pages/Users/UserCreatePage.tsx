@@ -23,7 +23,6 @@ const roleOptions: Array<{ label: string; value: UserRole }> = [
   { label: 'Sistem Yöneticisi', value: 'Admin' },
   { label: 'IT Yetkilisi', value: 'IT' },
   { label: 'Çalışan', value: 'Employee' },
-  { label: 'Denetçi / Yönetici', value: 'Auditor' },
 ]
 
 function UserCreatePage() {
@@ -60,7 +59,7 @@ function UserCreatePage() {
   }, [loadFormData])
 
   useEffect(() => {
-    if (selectedRole && selectedRole !== 'Employee') {
+    if (selectedRole === 'Admin') {
       form.setFieldValue('employeeId', undefined)
     }
   }, [form, selectedRole])
@@ -139,14 +138,14 @@ function UserCreatePage() {
                   name="employeeId"
                   rules={[
                     {
-                      required: selectedRole === 'Employee',
-                      message: 'Çalışan rolü için çalışan seçin.',
+                      required: selectedRole === 'Employee' || selectedRole === 'IT',
+                      message: 'Çalışan veya IT rolü için personel seçin.',
                     },
                   ]}
                 >
                   <Select<string>
-                    allowClear={selectedRole !== 'Employee'}
-                    disabled={selectedRole !== 'Employee'}
+                    allowClear={selectedRole === 'Admin'}
+                    disabled={selectedRole === 'Admin'}
                     optionFilterProp="label"
                     options={employeeOptions}
                     placeholder="Çalışan seçin"

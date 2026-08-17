@@ -9,7 +9,7 @@ using TakipProgrami.Api.Helpers;
 namespace TakipProgrami.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = "Admin,IT")]
 [Route("api/assets")]
 public sealed class AssetsController(ApplicationDbContext dbContext) : ControllerBase
 {
@@ -30,7 +30,11 @@ public sealed class AssetsController(ApplicationDbContext dbContext) : Controlle
                 asset.Status,
                 asset.Location,
                 asset.PurchaseDate,
-                asset.WarrantyEndDate))
+                asset.WarrantyEndDate,
+                asset.Assignments.Where(x => x.ReturnedAt == null).Select(x => x.EmployeeId).FirstOrDefault(),
+                asset.Assignments.Where(x => x.ReturnedAt == null).Select(x => x.Employee.FullName).FirstOrDefault(),
+                asset.Assignments.Where(x => x.ReturnedAt == null).Select(x => x.Employee.Department).FirstOrDefault(),
+                asset.Assignments.Where(x => x.ReturnedAt == null).Select(x => (DateTimeOffset?)x.AssignedAt).FirstOrDefault()))
             .ToListAsync(cancellationToken);
 
         return Ok(assets);
@@ -43,9 +47,16 @@ public sealed class AssetsController(ApplicationDbContext dbContext) : Controlle
     {
         var asset = await dbContext.Assets
             .AsNoTracking()
-            .FirstOrDefaultAsync(current => current.Id == id, cancellationToken);
+            .Where(current => current.Id == id)
+            .Select(current => new AssetDto(current.Id, current.AssetCode, current.Category, current.Brand, current.Model,
+                current.SerialNumber, current.Status, current.Location, current.PurchaseDate, current.WarrantyEndDate,
+                current.Assignments.Where(x => x.ReturnedAt == null).Select(x => x.EmployeeId).FirstOrDefault(),
+                current.Assignments.Where(x => x.ReturnedAt == null).Select(x => x.Employee.FullName).FirstOrDefault(),
+                current.Assignments.Where(x => x.ReturnedAt == null).Select(x => x.Employee.Department).FirstOrDefault(),
+                current.Assignments.Where(x => x.ReturnedAt == null).Select(x => (DateTimeOffset?)x.AssignedAt).FirstOrDefault()))
+            .FirstOrDefaultAsync(cancellationToken);
 
-        return asset is null ? NotFound() : Ok(ToDto(asset));
+        return asset is null ? NotFound() : Ok(asset);
     }
 
     [HttpPost]
@@ -57,6 +68,12 @@ public sealed class AssetsController(ApplicationDbContext dbContext) : Controlle
         AssetCreateDto request,
         CancellationToken cancellationToken)
     {
+        if (request.Status.Trim().Equals("Zimmetli", StringComparison.OrdinalIgnoreCase))
+        {
+            return AssignmentStatusConflict(
+                "Yeni cihaz Zimmetli durumunda oluşturulamaz. Zimmet durumu yalnız zimmet işlemiyle belirlenir.");
+        }
+
         var assetCode = request.AssetCode.Trim();
         var serialNumber = request.SerialNumber.Trim();
 
@@ -118,6 +135,21 @@ public sealed class AssetsController(ApplicationDbContext dbContext) : Controlle
         if (asset is null)
         {
             return NotFound();
+        }
+
+        var hasActiveAssignment = await dbContext.Assignments.AnyAsync(
+            assignment => assignment.AssetId == id && assignment.ReturnedAt == null,
+            cancellationToken);
+        var requestedStatusIsAssigned = request.Status.Trim().Equals(
+            "Zimmetli",
+            StringComparison.OrdinalIgnoreCase);
+
+        if (hasActiveAssignment != requestedStatusIsAssigned)
+        {
+            return AssignmentStatusConflict(
+                hasActiveAssignment
+                    ? "Aktif zimmeti bulunan cihazın durumu zimmet iadesi tamamlanmadan değiştirilemez."
+                    : "Cihaz Zimmetli durumuna yalnız yeni zimmet işlemiyle geçirilebilir.");
         }
 
         var assetCode = request.AssetCode.Trim();
@@ -188,6 +220,14 @@ public sealed class AssetsController(ApplicationDbContext dbContext) : Controlle
             Detail = detail
         });
 
+    private ConflictObjectResult AssignmentStatusConflict(string detail) =>
+        Conflict(new ProblemDetails
+        {
+            Status = StatusCodes.Status409Conflict,
+            Title = "Cihaz ve zimmet durumu uyuşmuyor",
+            Detail = detail
+        });
+
     private static AssetDto ToDto(Entities.Asset asset) =>
         new(
             asset.Id,
@@ -199,5 +239,6 @@ public sealed class AssetsController(ApplicationDbContext dbContext) : Controlle
             asset.Status,
             asset.Location,
             asset.PurchaseDate,
-            asset.WarrantyEndDate);
+            asset.WarrantyEndDate,
+            null, null, null, null);
 }

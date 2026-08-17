@@ -180,7 +180,14 @@ function AssetsPage() {
       dataIndex: 'status',
       key: 'status',
       width: 100,
-      render: (status: AssetStatus) => <StatusTag status={status} />,
+      render: (status: AssetStatus, item) => (
+        <Space direction="vertical" size={0}>
+          <StatusTag status={status} />
+          {status === 'Zimmetli' && item.currentAssigneeName && (
+            <Typography.Text type="secondary">— {item.currentAssigneeName}</Typography.Text>
+          )}
+        </Space>
+      ),
     },
     {
       title: 'Lokasyon',
@@ -207,7 +214,7 @@ function AssetsPage() {
       align: 'center',
       className: 'asset-date-column',
       width: 120,
-      sorter: (first, second) => first.warrantyEndDate.localeCompare(second.warrantyEndDate),
+      sorter: (first, second) => (first.warrantyEndDate ?? '').localeCompare(second.warrantyEndDate ?? ''),
       render: (warrantyEndDate: string) => formatDate(warrantyEndDate),
     },
     {

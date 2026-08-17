@@ -45,7 +45,8 @@ public sealed class UserService(
         AppRole callerRole,
         CancellationToken cancellationToken)
     {
-        if (!Enum.TryParse<AppRole>(request.Role.Trim(), true, out var requestedRole))
+        if (request.Role.Trim().Equals("Auditor", StringComparison.OrdinalIgnoreCase) ||
+            !Enum.TryParse<AppRole>(request.Role.Trim(), true, out var requestedRole))
         {
             return new(UserOperationStatus.ValidationError, ErrorMessage: "Geçerli bir kullanıcı rolü seçin.");
         }
@@ -59,14 +60,14 @@ public sealed class UserService(
         var email = request.Email.Trim();
         var employeeId = Clean(request.EmployeeId);
 
-        if (requestedRole == AppRole.Employee && employeeId is null)
+        if (requestedRole is AppRole.Employee or AppRole.IT && employeeId is null)
         {
             return new(UserOperationStatus.ValidationError, ErrorMessage: "Çalışan rolü için çalışan seçimi zorunludur.");
         }
 
-        if (requestedRole != AppRole.Employee && employeeId is not null)
+        if (requestedRole == AppRole.Admin && employeeId is not null)
         {
-            return new(UserOperationStatus.ValidationError, ErrorMessage: "Çalışan seçimi yalnızca Çalışan rolü için kullanılabilir.");
+            return new(UserOperationStatus.ValidationError, ErrorMessage: "Sistem yöneticisi hesabı bir çalışanla ilişkilendirilemez.");
         }
 
         Employee? employee = null;
@@ -140,7 +141,6 @@ public sealed class UserService(
         AppRole.Admin => "Sistem Yöneticisi",
         AppRole.IT => "IT Yetkilisi",
         AppRole.Employee => "Çalışan",
-        AppRole.Auditor => "Denetçi / Yönetici",
         _ => role.ToString()
     };
 

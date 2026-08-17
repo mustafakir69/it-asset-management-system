@@ -12,4 +12,11 @@ public sealed class AppUser
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? LastLoginAt { get; set; }
     public Employee? Employee { get; set; }
+    public ICollection<Assignment> AssignmentsCreated { get; set; } = [];
+    public ICollection<Assignment> AssignmentsReturned { get; set; } = [];
+    public ICollection<StockTransaction> StockTransactions { get; set; } = [];
+    public ICollection<MaintenancePlan> ResponsibleMaintenancePlans { get; set; } = [];
+    public ICollection<MaintenanceTask> CompletedMaintenanceTasks { get; set; } = [];
+    public ICollection<MaintenanceRequest> AssignedSupportRequests { get; set; } = [];
+    public ICollection<MaintenanceRequest> CompletedSupportRequests { get; set; } = [];
 }

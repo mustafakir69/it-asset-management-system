@@ -193,8 +193,8 @@ function WarrantiesPage() {
       width: 170,
       render: (_value, item) => (
         <Space direction="vertical" size={0}>
-          <Typography.Text strong>{item.brand}</Typography.Text>
-          <Typography.Text type="secondary">{item.model}</Typography.Text>
+          <Typography.Text strong>{item.assetName}</Typography.Text>
+          <Typography.Text type="secondary">{item.assetCode}</Typography.Text>
         </Space>
       ),
     },
@@ -210,7 +210,7 @@ function WarrantiesPage() {
       render: (value: string) => formatDate(value),
     },
     {
-      title: 'Garanti Bitiş Tarihi',
+      title: 'Garanti Bitişi',
       dataIndex: 'warrantyEndDate',
       key: 'warrantyEndDate',
       align: 'center',
@@ -230,7 +230,15 @@ function WarrantiesPage() {
       render: (value: number | null) => formatRemainingDays(value),
     },
     {
-      title: 'Durum',
+      title: 'Kullanım Durumu',
+      key: 'assetStatus',
+      width: 160,
+      render: (_value, item) => item.assetStatus === 'Zimmetli' && item.currentAssigneeName
+        ? `Zimmetli — ${item.currentAssigneeName}`
+        : item.assetStatus,
+    },
+    {
+      title: 'Garanti Durumu',
       dataIndex: 'warrantyStatus',
       key: 'warrantyStatus',
       align: 'center',

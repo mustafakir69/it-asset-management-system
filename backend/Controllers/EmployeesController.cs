@@ -7,7 +7,7 @@ using TakipProgrami.Api.DTOs;
 namespace TakipProgrami.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = "Admin,IT")]
 [Route("api/employees")]
 public sealed class EmployeesController(ApplicationDbContext dbContext) : ControllerBase
 {
@@ -25,7 +25,7 @@ public sealed class EmployeesController(ApplicationDbContext dbContext) : Contro
                 employee.EmployeeNo,
                 employee.FullName,
                 employee.Department,
-                employee.Email))
+                employee.CorporateEmail))
             .ToListAsync(cancellationToken);
 
         return Ok(employees);

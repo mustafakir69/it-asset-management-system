@@ -54,8 +54,10 @@ const mapAssignment = (value: unknown): Assignment => {
     typeof value.department !== 'string' ||
     typeof value.assignedAt !== 'string' ||
     !isNullableString(value.returnedAt) ||
-    typeof value.assignedBy !== 'string' ||
-    !isNullableString(value.returnedBy) ||
+    typeof value.assignedByUserId !== 'string' ||
+    typeof value.assignedByName !== 'string' ||
+    !isNullableString(value.returnedByUserId) ||
+    !isNullableString(value.returnedByName) ||
     !isNullableString(value.notes) ||
     !isNullableString(value.returnNotes) ||
     typeof value.isActive !== 'boolean'
@@ -78,8 +80,10 @@ const mapAssignment = (value: unknown): Assignment => {
     department: value.department,
     assignedAt: value.assignedAt,
     returnedAt: value.returnedAt,
-    assignedBy: value.assignedBy,
-    returnedBy: value.returnedBy,
+    assignedByUserId: value.assignedByUserId,
+    assignedByName: value.assignedByName,
+    returnedByUserId: value.returnedByUserId,
+    returnedByName: value.returnedByName,
     notes: value.notes,
     returnNotes: value.returnNotes,
     isActive: value.isActive,
