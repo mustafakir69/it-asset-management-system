@@ -8,12 +8,12 @@ export const assetCategories = [
 ] as const
 
 export const assetStatuses = [
-  'Stokta',
+  'Boşta',
   'Zimmetli',
   'Bakımda',
   'Kayıp',
   'Hurda',
-  'Elden çıkarıldı',
+  'Elden Çıkarıldı',
 ] as const
 
 export const assetLocations = [
@@ -27,6 +27,18 @@ export const assetLocations = [
 export type AssetCategory = (typeof assetCategories)[number]
 export type AssetStatus = (typeof assetStatuses)[number]
 export type AssetLocation = (typeof assetLocations)[number]
+
+export const assetScrapReasons = [
+  'Ekonomik onarım mümkün değil',
+  'Fiziksel hasar',
+  'Donanım ömrünü tamamladı',
+  'Diğer',
+] as const
+
+export const assetDisposalMethods = ['Satış', 'Bağış', 'İmha', 'Diğer'] as const
+
+export type AssetScrapReason = (typeof assetScrapReasons)[number]
+export type AssetDisposalMethod = (typeof assetDisposalMethods)[number]
 
 export interface Asset {
   id: string
@@ -48,3 +60,36 @@ export interface Asset {
 export type AssetInput = Pick<Asset,
   'assetCode' | 'category' | 'brand' | 'model' | 'serialNumber' | 'status' |
   'location' | 'purchaseDate' | 'warrantyEndDate'>
+
+export interface AssetMovement {
+  id: string
+  assetId: string
+  movementType: string
+  occurredAt: string
+  previousStatus: AssetStatus | null
+  newStatus: AssetStatus
+  performedByUserId: string
+  performedByName: string
+  description: string | null
+  reason: string | null
+  method: string | null
+  relatedEntityType: string | null
+  relatedEntityId: string | null
+}
+
+export interface AssetLostInput {
+  lostDate: string
+  description: string
+}
+
+export interface AssetScrapInput {
+  scrappedDate: string
+  reason: AssetScrapReason
+  description?: string
+}
+
+export interface AssetDisposeInput {
+  disposedDate: string
+  method: AssetDisposalMethod
+  description?: string
+}

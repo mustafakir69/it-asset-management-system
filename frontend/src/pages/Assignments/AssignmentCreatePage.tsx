@@ -88,7 +88,7 @@ function AssignmentCreatePage() {
     <section className="assignment-create-page">
       <PageHeader
         title="Yeni Zimmet"
-        description="Stokta bulunan uygun bir cihazı çalışana zimmetleyin."
+        description="Boşta bulunan uygun bir cihazı çalışana zimmetleyin."
         actions={
           <Button icon={<ArrowLeftOutlined />} onClick={() => void navigate('/assignments')}>
             Aktif Zimmetlere Dön

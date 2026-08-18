@@ -1,12 +1,12 @@
 import { Tag } from 'antd'
 
 export type StatusType =
-  | 'Stokta'
+  | 'Boşta'
   | 'Zimmetli'
   | 'Bakımda'
   | 'Kayıp'
   | 'Hurda'
-  | 'Elden çıkarıldı'
+  | 'Elden Çıkarıldı'
   | 'Aktif'
   | 'İade Edildi'
   | 'Pasif'
@@ -29,12 +29,12 @@ export interface StatusTagProps {
 }
 
 const statusColors: Record<StatusType, string> = {
-  Stokta: 'green',
+  Boşta: 'green',
   Zimmetli: 'blue',
   Bakımda: 'orange',
   Kayıp: 'red',
   Hurda: 'default',
-  'Elden çıkarıldı': 'purple',
+  'Elden Çıkarıldı': 'purple',
   Aktif: 'green',
   'İade Edildi': 'cyan',
   Pasif: 'default',

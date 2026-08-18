@@ -48,7 +48,7 @@ public sealed class MaintenancePlansController(ApplicationDbContext db) : Contro
     private async Task<ActionResult?> Validate(string assetId, string userId, CancellationToken ct)
     {
         var asset = await db.Assets.FirstOrDefaultAsync(x => x.Id == assetId, ct);
-        if (asset is null || asset.Status is "Hurda" or "Elden çıkarıldı") return BadRequest(new ProblemDetails { Detail = "Geçerli bir cihaz seçin." });
+        if (asset is null || asset.Status is "Hurda" or "Elden Çıkarıldı") return BadRequest(new ProblemDetails { Detail = "Geçerli bir cihaz seçin." });
         var user = await db.AppUsers.FirstOrDefaultAsync(x => x.Id == userId, ct);
         if (user is null || !user.IsActive || user.Role != AppRole.IT) return BadRequest(new ProblemDetails { Detail = "Sorumlu yalnızca aktif bir IT kullanıcısı olabilir." });
         return null;

@@ -13,7 +13,7 @@ import './DashboardPage.css'
 interface SummaryPresentation { color: string; icon: ReactNode; title: string }
 const summaryPresentations: Record<DashboardSummaryKey, SummaryPresentation> = {
   totalAssets: { color: '#1677ff', icon: <DesktopOutlined />, title: 'Toplam Cihaz' },
-  inStockAssets: { color: '#389e0d', icon: <DatabaseOutlined />, title: 'Stoktaki Cihaz' },
+  inStockAssets: { color: '#389e0d', icon: <DatabaseOutlined />, title: 'Boştaki Cihaz' },
   assignedAssets: { color: '#0958d9', icon: <SolutionOutlined />, title: 'Zimmetli Cihaz' },
   maintenanceAssets: { color: '#d46b08', icon: <ToolOutlined />, title: 'Bakımdaki Cihaz' },
   expiringWarranties: { color: '#d48806', icon: <SafetyCertificateOutlined />, title: 'Yaklaşan Garantiler' },

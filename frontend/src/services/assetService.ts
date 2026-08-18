@@ -5,8 +5,12 @@ import {
   assetStatuses,
   type Asset,
   type AssetCategory,
+  type AssetDisposeInput,
   type AssetInput,
+  type AssetLostInput,
   type AssetLocation,
+  type AssetMovement,
+  type AssetScrapInput,
   type AssetStatus,
 } from '../types/asset'
 import { apiClient } from './api'
@@ -16,6 +20,10 @@ export interface AssetService {
   getAssetById: (id: string) => Promise<Asset | undefined>
   createAsset: (asset: AssetInput) => Promise<Asset>
   updateAsset: (id: string, asset: AssetInput) => Promise<Asset>
+  getAssetMovements: (id: string) => Promise<AssetMovement[]>
+  markAssetLost: (id: string, input: AssetLostInput) => Promise<AssetMovement>
+  scrapAsset: (id: string, input: AssetScrapInput) => Promise<AssetMovement>
+  disposeAsset: (id: string, input: AssetDisposeInput) => Promise<AssetMovement>
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -89,6 +97,63 @@ const mapAssetResponse = (value: unknown): Asset => {
     currentAssigneeName,
     currentAssigneeDepartment,
     currentAssignmentDate,
+  }
+}
+
+const mapAssetMovementResponse = (value: unknown): AssetMovement => {
+  if (!isRecord(value)) {
+    throw new Error('API geçersiz bir cihaz hareketi döndürdü.')
+  }
+
+  const {
+    id,
+    assetId,
+    movementType,
+    occurredAt,
+    previousStatus,
+    newStatus,
+    performedByUserId,
+    performedByName,
+    description,
+    reason,
+    method,
+    relatedEntityType,
+    relatedEntityId,
+  } = value
+
+  if (
+    typeof id !== 'string' ||
+    typeof assetId !== 'string' ||
+    typeof movementType !== 'string' ||
+    typeof occurredAt !== 'string' ||
+    (previousStatus !== null && (typeof previousStatus !== 'string' || !isAssetStatus(previousStatus))) ||
+    typeof newStatus !== 'string' ||
+    !isAssetStatus(newStatus) ||
+    typeof performedByUserId !== 'string' ||
+    typeof performedByName !== 'string' ||
+    (description !== null && typeof description !== 'string') ||
+    (reason !== null && typeof reason !== 'string') ||
+    (method !== null && typeof method !== 'string') ||
+    (relatedEntityType !== null && typeof relatedEntityType !== 'string') ||
+    (relatedEntityId !== null && typeof relatedEntityId !== 'string')
+  ) {
+    throw new Error('API cihaz hareketi beklenen formatta değil.')
+  }
+
+  return {
+    id,
+    assetId,
+    movementType,
+    occurredAt,
+    previousStatus,
+    newStatus,
+    performedByUserId,
+    performedByName,
+    description,
+    reason,
+    method,
+    relatedEntityType,
+    relatedEntityId,
   }
 }
 
@@ -184,6 +249,56 @@ export const assetService: AssetService = {
       return mapAssetResponse(response.data)
     } catch (error: unknown) {
       throw new Error(getApiErrorMessage(error, 'Cihaz bilgileri güncellenemedi.'))
+    }
+  },
+
+  getAssetMovements: async (id) => {
+    try {
+      const response = await apiClient.get<unknown>(
+        `/api/assets/${encodeURIComponent(id)}/movements`,
+      )
+      if (!Array.isArray(response.data)) {
+        throw new Error('API cihaz hareket listesi beklenen formatta değil.')
+      }
+      return response.data.map(mapAssetMovementResponse)
+    } catch (error: unknown) {
+      throw new Error(getApiErrorMessage(error, 'Cihaz hareket geçmişi alınamadı.'))
+    }
+  },
+
+  markAssetLost: async (id, input) => {
+    try {
+      const response = await apiClient.post<unknown>(
+        `/api/assets/${encodeURIComponent(id)}/mark-lost`,
+        input,
+      )
+      return mapAssetMovementResponse(response.data)
+    } catch (error: unknown) {
+      throw new Error(getApiErrorMessage(error, 'Cihaz kayıp olarak işaretlenemedi.'))
+    }
+  },
+
+  scrapAsset: async (id, input) => {
+    try {
+      const response = await apiClient.post<unknown>(
+        `/api/assets/${encodeURIComponent(id)}/scrap`,
+        input,
+      )
+      return mapAssetMovementResponse(response.data)
+    } catch (error: unknown) {
+      throw new Error(getApiErrorMessage(error, 'Cihaz hurdaya ayrılamadı.'))
+    }
+  },
+
+  disposeAsset: async (id, input) => {
+    try {
+      const response = await apiClient.post<unknown>(
+        `/api/assets/${encodeURIComponent(id)}/dispose`,
+        input,
+      )
+      return mapAssetMovementResponse(response.data)
+    } catch (error: unknown) {
+      throw new Error(getApiErrorMessage(error, 'Cihaz elden çıkarılamadı.'))
     }
   },
 }

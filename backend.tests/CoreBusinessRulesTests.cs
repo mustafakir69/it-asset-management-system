@@ -310,7 +310,7 @@ public sealed class CoreBusinessRulesTests
     public async Task AssignmentActors_AreTakenFromCurrentUser()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext();
-        var asset = Asset("actor-asset", "Stokta");
+        var asset = Asset("actor-asset", AssetLifecycleRules.Available);
         var employee = Employee("actor-employee");
         var user = User("actor-it", AppRole.IT);
         dbContext.AddRange(asset, employee, user);
@@ -326,6 +326,12 @@ public sealed class CoreBusinessRulesTests
         Assert.Equal(AssignmentOperationStatus.Success, created.Status);
         Assert.Equal(user.Id, assignment.AssignedByUserId);
         Assert.Equal("Zimmetli", asset.Status);
+        var assignedMovement = await dbContext.AssetMovements.SingleAsync();
+        Assert.Equal(AssetMovementType.Assigned, assignedMovement.MovementType);
+        Assert.Equal(AssetLifecycleRules.Available, assignedMovement.PreviousStatus);
+        Assert.Equal(AssetLifecycleRules.Assigned, assignedMovement.NewStatus);
+        Assert.Equal(user.Id, assignedMovement.PerformedByUserId);
+        Assert.Equal(assignment.Id, assignedMovement.RelatedEntityId);
 
         var returned = await service.ReturnAsync(assignment.Id, new AssignmentReturnDto
         {
@@ -333,7 +339,207 @@ public sealed class CoreBusinessRulesTests
         }, user.Id, CancellationToken.None);
         Assert.Equal(AssignmentOperationStatus.Success, returned.Status);
         Assert.Equal(user.Id, assignment.ReturnedByUserId);
-        Assert.Equal("Stokta", asset.Status);
+        Assert.Equal(AssetLifecycleRules.Available, asset.Status);
+        var returnedMovement = await dbContext.AssetMovements.SingleAsync(
+            movement => movement.MovementType == AssetMovementType.Returned);
+        Assert.Equal(AssetLifecycleRules.Assigned, returnedMovement.PreviousStatus);
+        Assert.Equal(AssetLifecycleRules.Available, returnedMovement.NewStatus);
+        Assert.Equal(user.Id, returnedMovement.PerformedByUserId);
+    }
+
+    [Theory]
+    [InlineData("Bakımda")]
+    [InlineData("Kayıp")]
+    [InlineData("Hurda")]
+    [InlineData("Elden Çıkarıldı")]
+    public async Task AssignmentService_RejectsAssetsThatAreNotAvailable(string status)
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext();
+        var asset = Asset($"unavailable-{status}", status);
+        var employee = Employee($"employee-{status}");
+        var user = User($"user-{status}", AppRole.IT);
+        dbContext.AddRange(asset, employee, user);
+        await dbContext.SaveChangesAsync();
+
+        var result = await new AssignmentService(dbContext).CreateAsync(
+            new AssignmentCreateDto
+            {
+                AssetId = asset.Id,
+                EmployeeId = employee.Id,
+                AssignedAt = DateTimeOffset.UtcNow
+            },
+            user.Id,
+            CancellationToken.None);
+
+        Assert.Equal(AssignmentOperationStatus.Conflict, result.Status);
+        Assert.Contains("Boşta", result.ErrorMessage);
+        Assert.Empty(dbContext.Assignments);
+        Assert.Empty(dbContext.AssetMovements);
+    }
+
+    [Fact]
+    public async Task AssetLifecycle_CriticalTransitionsStoreMetadataAndCurrentActor()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext();
+        var user = User("lifecycle-it", AppRole.IT);
+        var lostAsset = Asset("lost-asset", AssetLifecycleRules.Available);
+        var scrappedAsset = Asset("scrapped-asset", AssetLifecycleRules.Available);
+        var disposedAsset = Asset("disposed-asset", AssetLifecycleRules.Available);
+        dbContext.AddRange(user, lostAsset, scrappedAsset, disposedAsset);
+        await dbContext.SaveChangesAsync();
+        var service = new AssetLifecycleService(dbContext);
+
+        var lost = await service.MarkLostAsync(lostAsset.Id, new AssetLostDto
+        {
+            LostDate = new DateOnly(2026, 8, 18),
+            Description = "Saha çalışması sonrasında cihaz bulunamadı."
+        }, user.Id, CancellationToken.None);
+        var scrapped = await service.ScrapAsync(scrappedAsset.Id, new AssetScrapDto
+        {
+            ScrappedDate = new DateOnly(2026, 8, 18),
+            Reason = "Fiziksel hasar",
+            Description = "Kasa ve anakart kullanılamaz durumda."
+        }, user.Id, CancellationToken.None);
+        var disposed = await service.DisposeAsync(disposedAsset.Id, new AssetDisposeDto
+        {
+            DisposedDate = new DateOnly(2026, 8, 18),
+            Method = "İmha",
+            Description = "Yetkili tesis üzerinden imha edildi."
+        }, user.Id, CancellationToken.None);
+
+        Assert.Equal(AssetLifecycleOperationStatus.Success, lost.Status);
+        Assert.Equal(AssetLifecycleOperationStatus.Success, scrapped.Status);
+        Assert.Equal(AssetLifecycleOperationStatus.Success, disposed.Status);
+        Assert.Equal(AssetLifecycleRules.Lost, lostAsset.Status);
+        Assert.Equal(AssetLifecycleRules.Scrapped, scrappedAsset.Status);
+        Assert.Equal(AssetLifecycleRules.Disposed, disposedAsset.Status);
+
+        var movements = await dbContext.AssetMovements.OrderBy(item => item.AssetId).ToListAsync();
+        Assert.Equal(3, movements.Count);
+        Assert.All(movements, movement => Assert.Equal(user.Id, movement.PerformedByUserId));
+        Assert.Equal("Saha çalışması sonrasında cihaz bulunamadı.", movements.Single(item => item.AssetId == lostAsset.Id).Description);
+        Assert.Equal("Fiziksel hasar", movements.Single(item => item.AssetId == scrappedAsset.Id).Reason);
+        Assert.Equal("İmha", movements.Single(item => item.AssetId == disposedAsset.Id).Method);
+    }
+
+    [Fact]
+    public async Task AssetLifecycle_RejectsCriticalTransitionWhenActiveAssignmentExists()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext();
+        var asset = Asset("assigned-critical", AssetLifecycleRules.Assigned);
+        var employee = Employee("assigned-critical-owner");
+        var user = User("assigned-critical-it", AppRole.IT);
+        dbContext.AddRange(asset, employee, user, new Assignment
+        {
+            Id = "assigned-critical-assignment",
+            AssetId = asset.Id,
+            EmployeeId = employee.Id,
+            AssignedAt = DateTimeOffset.UtcNow.AddDays(-1),
+            AssignedByUserId = user.Id,
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-1)
+        });
+        await dbContext.SaveChangesAsync();
+
+        var result = await new AssetLifecycleService(dbContext).ScrapAsync(
+            asset.Id,
+            new AssetScrapDto
+            {
+                ScrappedDate = new DateOnly(2026, 8, 18),
+                Reason = "Fiziksel hasar"
+            },
+            user.Id,
+            CancellationToken.None);
+
+        Assert.Equal(AssetLifecycleOperationStatus.Conflict, result.Status);
+        Assert.Contains("Önce zimmet iadesini", result.ErrorMessage);
+        Assert.Equal(AssetLifecycleRules.Assigned, asset.Status);
+        Assert.Empty(dbContext.AssetMovements);
+    }
+
+    [Fact]
+    public async Task AssetCreate_StartsAvailableAndCreatesInventoryMovement()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext();
+        var user = User("asset-create-it", AppRole.IT);
+        dbContext.AppUsers.Add(user);
+        await dbContext.SaveChangesAsync();
+        var controller = WithUser(
+            new AssetsController(dbContext, new AssetLifecycleService(dbContext)),
+            user.Id,
+            AppRole.IT);
+
+        var result = await controller.Create(new AssetCreateDto
+        {
+            AssetCode = "AST-LIFECYCLE-1",
+            Category = "Dizüstü Bilgisayar",
+            Brand = "Lenovo",
+            Model = "ThinkPad",
+            SerialNumber = "SN-LIFECYCLE-1",
+            Status = AssetLifecycleRules.Available,
+            Location = "İstanbul Merkez",
+            PurchaseDate = new DateOnly(2026, 8, 18),
+            WarrantyEndDate = new DateOnly(2029, 8, 18)
+        }, CancellationToken.None);
+
+        Assert.IsType<CreatedAtActionResult>(result.Result);
+        var asset = await dbContext.Assets.SingleAsync();
+        var movement = await dbContext.AssetMovements.SingleAsync();
+        Assert.Equal(AssetLifecycleRules.Available, asset.Status);
+        Assert.Equal(AssetMovementType.InventoryCreated, movement.MovementType);
+        Assert.Equal(asset.Id, movement.AssetId);
+        Assert.Equal(user.Id, movement.PerformedByUserId);
+    }
+
+    [Fact]
+    public async Task MaintenanceCompletion_AddsAssetMovementWithoutChangingAssetStatus()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext();
+        var asset = Asset("maintenance-movement-asset", AssetLifecycleRules.Available);
+        var user = User("maintenance-movement-it", AppRole.IT);
+        var plan = new MaintenancePlan
+        {
+            Id = "maintenance-movement-plan",
+            AssetId = asset.Id,
+            Name = "Periyodik kontrol",
+            FrequencyDays = 90,
+            StartDate = new DateOnly(2026, 8, 18),
+            ResponsibleUserId = user.Id,
+            EstimatedDurationMinutes = 30,
+            ReminderLeadDays = 5,
+            NextDueAt = new DateOnly(2026, 8, 18),
+            IsActive = false,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        var task = new MaintenanceTask
+        {
+            Id = "maintenance-movement-task",
+            MaintenancePlanId = plan.Id,
+            AssetId = asset.Id,
+            Title = "Periyodik kontrol",
+            PlannedDate = new DateOnly(2026, 8, 18),
+            Status = MaintenanceTaskStatus.Planned,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        dbContext.AddRange(asset, user, plan, task);
+        await dbContext.SaveChangesAsync();
+        var controller = WithUser(
+            new MaintenanceTasksController(dbContext),
+            user.Id,
+            AppRole.IT);
+
+        var result = await controller.Complete(task.Id, new MaintenanceTaskCompleteDto
+        {
+            CompletedDate = new DateOnly(2026, 8, 18),
+            Result = "Kontroller tamamlandı.",
+            WorkNotes = "Donanım ve güncellemeler kontrol edildi."
+        }, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        var movement = await dbContext.AssetMovements.SingleAsync();
+        Assert.Equal(AssetMovementType.MaintenanceCompleted, movement.MovementType);
+        Assert.Equal(task.Id, movement.RelatedEntityId);
+        Assert.Equal(user.Id, movement.PerformedByUserId);
+        Assert.Equal(AssetLifecycleRules.Available, asset.Status);
     }
 
     [Fact]
@@ -467,7 +673,7 @@ public sealed class CoreBusinessRulesTests
     public async Task MaintenancePlan_RejectsResponsibleUserWithoutItRole()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext();
-        var asset = Asset("maintenance-plan-asset", "Stokta");
+        var asset = Asset("maintenance-plan-asset", AssetLifecycleRules.Available);
         var employee = Employee("maintenance-plan-employee");
         var nonItUser = User("maintenance-plan-user", AppRole.Employee);
         nonItUser.EmployeeId = employee.Id;
@@ -560,7 +766,8 @@ public sealed class CoreBusinessRulesTests
         });
         await dbContext.SaveChangesAsync();
 
-        var result = await new AssetsController(dbContext).GetById(asset.Id, CancellationToken.None);
+        var result = await new AssetsController(dbContext, new AssetLifecycleService(dbContext))
+            .GetById(asset.Id, CancellationToken.None);
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var dto = Assert.IsType<AssetDto>(ok.Value);
         Assert.Equal(employee.Id, dto.CurrentAssigneeEmployeeId);
@@ -573,7 +780,7 @@ public sealed class CoreBusinessRulesTests
     public async Task AssignmentService_RejectsSecondActiveAssignment()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext();
-        var asset = Asset("asset-1", "Stokta");
+        var asset = Asset("asset-1", AssetLifecycleRules.Available);
         var employee = Employee("employee-1");
         dbContext.AddRange(asset, employee, new Assignment
         {

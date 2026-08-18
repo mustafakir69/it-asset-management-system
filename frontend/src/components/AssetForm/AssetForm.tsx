@@ -45,8 +45,15 @@ function AssetForm({
   onSubmit,
 }: AssetFormProps) {
   const [form] = Form.useForm<AssetFormValues>()
+  const isStatusReadOnly = initialValues
+    ? !['Boşta', 'Bakımda'].includes(initialValues.status)
+    : false
   const statusOptions = assetStatuses
-    .filter((status) => status !== 'Zimmetli' || initialValues?.status === 'Zimmetli')
+    .filter((status) =>
+      status === 'Boşta' ||
+      (initialValues !== undefined && status === 'Bakımda') ||
+      status === initialValues?.status,
+    )
     .map((status) => ({ label: status, value: status }))
 
   useEffect(() => {
@@ -60,6 +67,8 @@ function AssetForm({
           ? dayjs(initialValues.warrantyEndDate)
           : undefined,
       })
+    } else {
+      form.setFieldValue('status', 'Boşta')
     }
   }, [form, initialValues])
 
@@ -153,7 +162,7 @@ function AssetForm({
             rules={[{ required: true, message: 'Cihaz durumunu seçin.' }]}
           >
             <Select<AssetStatus>
-              disabled={initialValues?.status === 'Zimmetli'}
+              disabled={isStatusReadOnly}
               options={statusOptions}
               placeholder="Durum seçin"
             />

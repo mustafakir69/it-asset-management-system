@@ -137,9 +137,30 @@ public sealed class DevelopmentDataSeeder(
             var profile = assetProfiles[(number - 1) % assetProfiles.Length];
             var asset = new Asset { Id = id, AssetCode = $"DEV-2026-{number:0000}", Category = profile.Category,
                 Brand = profile.Brand, Model = profile.Model, SerialNumber = $"DEV-SN-{number:0000}",
-                Status = "Stokta", Location = number % 3 == 0 ? "Ankara Ofis" : "İstanbul Merkez",
+                Status = AssetLifecycleRules.Available, Location = number % 3 == 0 ? "Ankara Ofis" : "İstanbul Merkez",
                 PurchaseDate = new DateOnly(2025 + number % 2, 1 + number % 10, 1 + number % 20), WarrantyEndDate = new DateOnly(2028 + number % 2, 1 + number % 10, 1 + number % 20) };
             db.Assets.Add(asset); assets[id] = asset;
+        }
+        await db.SaveChangesAsync(ct);
+
+        foreach (var asset in assets.Values.Where(item => item.Id.StartsWith("asset-dev-", StringComparison.Ordinal)))
+        {
+            if (await db.AssetMovements.AnyAsync(
+                    movement => movement.AssetId == asset.Id &&
+                        movement.MovementType == AssetMovementType.InventoryCreated,
+                    ct))
+                continue;
+
+            var movement = AssetMovementFactory.Create(
+                asset.Id,
+                AssetMovementType.InventoryCreated,
+                new DateTimeOffset(asset.PurchaseDate.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero),
+                null,
+                AssetLifecycleRules.Available,
+                "app-user-it",
+                "Development cihazı envantere eklendi.");
+            movement.Id = $"asset-movement-dev-created-{asset.Id[^3..]}";
+            db.AssetMovements.Add(movement);
         }
         await db.SaveChangesAsync(ct);
 
@@ -150,11 +171,11 @@ public sealed class DevelopmentDataSeeder(
             var number = int.Parse(employee.EmployeeNo[4..]);
             var preferredAssetId = $"asset-dev-{number:000}";
             var asset = assets.GetValueOrDefault(preferredAssetId);
-            if (asset is null || asset.Status != "Stokta" ||
+            if (asset is null || asset.Status != AssetLifecycleRules.Available ||
                 await db.Assignments.AnyAsync(x => x.AssetId == asset.Id && x.ReturnedAt == null, ct))
             {
                 asset = assets.Values
-                    .Where(x => x.Status == "Stokta")
+                    .Where(x => x.Status == AssetLifecycleRules.Available)
                     .OrderBy(x => x.AssetCode)
                     .FirstOrDefault();
             }
@@ -164,6 +185,34 @@ public sealed class DevelopmentDataSeeder(
             asset.Status = "Zimmetli";
             db.Assignments.Add(new Assignment { Id = $"assignment-dev-{number:000}", AssetId = asset.Id, EmployeeId = employee.Id,
                 AssignedAt = now.AddDays(-number), AssignedByUserId = "app-user-it", Notes = "Development çalışma cihazı zimmeti.", CreatedAt = now });
+        }
+        await db.SaveChangesAsync(ct);
+
+        var developmentAssignments = await db.Assignments
+            .Include(item => item.Employee)
+            .Where(item => item.Id.StartsWith("assignment-dev-"))
+            .ToListAsync(ct);
+        foreach (var assignment in developmentAssignments)
+        {
+            if (await db.AssetMovements.AnyAsync(
+                    movement => movement.RelatedEntityType == nameof(Assignment) &&
+                        movement.RelatedEntityId == assignment.Id &&
+                        movement.MovementType == AssetMovementType.Assigned,
+                    ct))
+                continue;
+
+            var movement = AssetMovementFactory.Create(
+                assignment.AssetId,
+                AssetMovementType.Assigned,
+                assignment.AssignedAt,
+                AssetLifecycleRules.Available,
+                AssetLifecycleRules.Assigned,
+                assignment.AssignedByUserId,
+                $"Cihaz {assignment.Employee.FullName} adlı çalışana zimmetlendi.",
+                relatedEntityType: nameof(Assignment),
+                relatedEntityId: assignment.Id);
+            movement.Id = $"asset-movement-dev-assigned-{assignment.Id[^3..]}";
+            db.AssetMovements.Add(movement);
         }
         await db.SaveChangesAsync(ct);
 

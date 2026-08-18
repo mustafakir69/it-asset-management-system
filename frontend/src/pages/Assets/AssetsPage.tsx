@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ContentCard, EmptyState, ErrorState, PageHeader, StatusTag } from '../../components'
 import { assetService } from '../../services/assetService'
-import type { Asset, AssetCategory, AssetLocation, AssetStatus } from '../../types/asset'
+import { assetStatuses, type Asset, type AssetCategory, type AssetLocation, type AssetStatus } from '../../types/asset'
 import { formatDate } from '../../utils'
 import './AssetsPage.css'
 
@@ -71,11 +71,8 @@ function AssetsPage() {
   )
 
   const statusOptions = useMemo(
-    () =>
-      Array.from(new Set(assets.map((asset) => asset.status)))
-        .sort((first, second) => first.localeCompare(second, 'tr-TR'))
-        .map((status) => ({ label: status, value: status })),
-    [assets],
+    () => assetStatuses.map((status) => ({ label: status, value: status })),
+    [],
   )
 
   const locationOptions = useMemo(

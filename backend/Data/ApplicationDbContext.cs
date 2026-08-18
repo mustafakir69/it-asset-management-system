@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TakipProgrami.Api.Entities;
+using TakipProgrami.Api.Helpers;
 
 namespace TakipProgrami.Api.Data;
 
@@ -25,6 +26,7 @@ public sealed class ApplicationDbContext(
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<StockAlert> StockAlerts => Set<StockAlert>();
     public DbSet<MaintenanceNotification> MaintenanceNotifications => Set<MaintenanceNotification>();
+    public DbSet<AssetMovement> AssetMovements => Set<AssetMovement>();
 
     private static readonly JsonSerializerOptions AuditJsonOptions = new()
     {
@@ -52,7 +54,10 @@ public sealed class ApplicationDbContext(
 
         var asset = modelBuilder.Entity<Asset>();
 
-        asset.ToTable("Assets");
+        asset.ToTable("Assets", table =>
+            table.HasCheckConstraint(
+                "CK_Assets_Status_Valid",
+                "[Status] IN (N'Boşta', N'Zimmetli', N'Bakımda', N'Kayıp', N'Hurda', N'Elden Çıkarıldı')"));
         asset.HasKey(item => item.Id);
 
         asset.Property(item => item.Id).HasMaxLength(64);
@@ -76,12 +81,50 @@ public sealed class ApplicationDbContext(
 
         ConfigureEmployeesAndAssignments(modelBuilder);
         ConfigureAppUsers(modelBuilder);
+        ConfigureAssetMovements(modelBuilder);
         ConfigureStockItems(modelBuilder);
         ConfigureStockTransactions(modelBuilder);
         ConfigureLicenses(modelBuilder);
         ConfigureMaintenance(modelBuilder);
         ConfigureAuditLogs(modelBuilder);
         ConfigureNotifications(modelBuilder);
+    }
+
+    private static void ConfigureAssetMovements(ModelBuilder modelBuilder)
+    {
+        var movement = modelBuilder.Entity<AssetMovement>();
+
+        movement.ToTable("AssetMovements");
+        movement.HasKey(item => item.Id);
+        movement.Property(item => item.Id).HasMaxLength(64);
+        movement.Property(item => item.AssetId).HasMaxLength(64).IsRequired();
+        movement.Property(item => item.MovementType)
+            .HasConversion<string>()
+            .HasMaxLength(40)
+            .IsRequired();
+        movement.Property(item => item.OccurredAt).HasColumnType("datetimeoffset");
+        movement.Property(item => item.PreviousStatus).HasMaxLength(50);
+        movement.Property(item => item.NewStatus).HasMaxLength(50).IsRequired();
+        movement.Property(item => item.PerformedByUserId).HasMaxLength(64).IsRequired();
+        movement.Property(item => item.Description).HasMaxLength(2000);
+        movement.Property(item => item.Reason).HasMaxLength(250);
+        movement.Property(item => item.Method).HasMaxLength(100);
+        movement.Property(item => item.RelatedEntityType).HasMaxLength(100);
+        movement.Property(item => item.RelatedEntityId).HasMaxLength(64);
+        movement.Property(item => item.CreatedAt).HasColumnType("datetimeoffset");
+
+        movement.HasIndex(item => new { item.AssetId, item.OccurredAt })
+            .HasDatabaseName("IX_AssetMovements_AssetId_OccurredAt");
+        movement.HasIndex(item => item.PerformedByUserId)
+            .HasDatabaseName("IX_AssetMovements_PerformedByUserId");
+        movement.HasOne(item => item.Asset)
+            .WithMany(asset => asset.Movements)
+            .HasForeignKey(item => item.AssetId)
+            .OnDelete(DeleteBehavior.Restrict);
+        movement.HasOne(item => item.PerformedByUser)
+            .WithMany(user => user.AssetMovements)
+            .HasForeignKey(item => item.PerformedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureNotifications(ModelBuilder modelBuilder)
@@ -203,6 +246,7 @@ public sealed class ApplicationDbContext(
         entry.Entity switch
         {
             Asset => true,
+            AssetMovement => true,
             Assignment => true,
             StockItem => true,
             StockTransaction => entry.State == EntityState.Added,
@@ -225,6 +269,7 @@ public sealed class ApplicationDbContext(
         {
             return entry.Entity switch
             {
+                AssetMovement movement => AssetLifecycleRules.MovementDisplayName(movement.MovementType),
                 Assignment => "Zimmet Oluşturma",
                 StockTransaction => "Stok Hareketi",
                 AppUser => "Kullanıcı Oluşturma",

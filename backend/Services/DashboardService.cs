@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TakipProgrami.Api.Data;
 using TakipProgrami.Api.DTOs;
 using TakipProgrami.Api.Entities;
+using TakipProgrami.Api.Helpers;
 
 namespace TakipProgrami.Api.Services;
 
@@ -34,7 +35,7 @@ public sealed class DashboardService(ApplicationDbContext dbContext)
         var warningDate = today.AddDays(30);
 
         var totalAssets = await dbContext.Assets.CountAsync(cancellationToken);
-        var inStockAssets = await dbContext.Assets.CountAsync(item => item.Status == "Stokta", cancellationToken);
+        var inStockAssets = await dbContext.Assets.CountAsync(item => item.Status == AssetLifecycleRules.Available, cancellationToken);
         var assignedAssets = await dbContext.Assets.CountAsync(item => item.Status == "Zimmetli", cancellationToken);
         var maintenanceAssets = await dbContext.Assets.CountAsync(item => item.Status == "Bakımda", cancellationToken);
         var expiringWarranties = await dbContext.Assets.CountAsync(
@@ -77,7 +78,7 @@ public sealed class DashboardService(ApplicationDbContext dbContext)
                         item.Asset.AssetCode,
                         $"{item.Asset.Brand} {item.Asset.Model}",
                         $"{item.Asset.AssetCode} cihazı iade alındı.",
-                        "Stokta",
+                        AssetLifecycleRules.Available,
                         item.ReturnedAt.Value)
                     : null
             })

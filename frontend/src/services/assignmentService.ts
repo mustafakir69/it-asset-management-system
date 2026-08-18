@@ -143,7 +143,7 @@ export const assignmentService: AssignmentService = {
 
   getAssignableAssets: async () => {
     const assets = await assetService.getAssets()
-    return assets.filter((asset) => asset.status === 'Stokta')
+    return assets.filter((asset) => asset.status === 'Boşta')
   },
 
   getEmployees: async () => {

@@ -57,6 +57,7 @@ builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<StockService>();
 builder.Services.AddScoped<AssignmentService>();
+builder.Services.AddScoped<AssetLifecycleService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<ReportsService>();

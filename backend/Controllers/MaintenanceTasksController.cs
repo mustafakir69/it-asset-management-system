@@ -37,6 +37,9 @@ public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) :
         MaintenanceTaskCompleteDto request,
         CancellationToken cancellationToken)
     {
+        var currentUserId = User.GetUserId();
+        if (currentUserId is null) return Unauthorized();
+
         var task = await dbContext.MaintenanceTasks.Include(item => item.Asset).Include(item => item.MaintenancePlan)
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (task is null) return NotFound();
@@ -46,9 +49,22 @@ public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) :
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         task.Status = MaintenanceTaskStatus.Completed;
         task.CompletedDate = request.CompletedDate!.Value;
-        task.CompletedByUserId = User.GetUserId();
+        task.CompletedByUserId = currentUserId;
         task.Result = request.Result.Trim();
         task.WorkNotes = request.WorkNotes.Trim();
+        var completedAt = new DateTimeOffset(
+            request.CompletedDate.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified),
+            TimeZoneInfo.Local.GetUtcOffset(request.CompletedDate.Value.ToDateTime(TimeOnly.MinValue)));
+        dbContext.AssetMovements.Add(AssetMovementFactory.Create(
+            task.AssetId,
+            AssetMovementType.MaintenanceCompleted,
+            completedAt,
+            task.Asset.Status,
+            task.Asset.Status,
+            currentUserId,
+            $"{task.Title} bakım görevi tamamlandı. Sonuç: {task.Result}",
+            relatedEntityType: nameof(MaintenanceTask),
+            relatedEntityId: task.Id));
 
         if (task.MaintenancePlan.IsActive)
         {

@@ -19,4 +19,5 @@ public sealed class AppUser
     public ICollection<MaintenanceTask> CompletedMaintenanceTasks { get; set; } = [];
     public ICollection<MaintenanceRequest> AssignedSupportRequests { get; set; } = [];
     public ICollection<MaintenanceRequest> CompletedSupportRequests { get; set; } = [];
+    public ICollection<AssetMovement> AssetMovements { get; set; } = [];
 }
