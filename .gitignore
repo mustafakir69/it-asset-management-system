@@ -1,4 +1,4 @@
-# AI / Codex çalışma dosyaları
+# Local development files
 AGENTS.md
 TASKS.md
 PROGRESS.md
@@ -42,4 +42,6 @@ obj/
 # Local DB / temporary
 *.db
 *.db-shm
-*.db-wal
+*.db-walAGENTS.md
+ARCHITECTURE.md
+AGENTS.md
