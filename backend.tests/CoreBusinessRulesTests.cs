@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using TakipProgrami.Api.Controllers;
 using TakipProgrami.Api.DTOs;
@@ -16,6 +17,188 @@ namespace TakipProgrami.Api.Tests;
 
 public sealed class CoreBusinessRulesTests
 {
+    [Fact]
+    public async Task DevelopmentSeeder_SynchronizesLegacyEmployeeUsernameWithoutChangingIdentityOrPassword()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["DevelopmentSeed:TemporaryPassword"] = "TestOnly-123!"
+            })
+            .Build();
+        var seeder = new DevelopmentDataSeeder(
+            dbContext,
+            new PasswordHasher<AppUser>(),
+            configuration);
+        await seeder.SeedAsync(CancellationToken.None);
+
+        var deniz = await dbContext.AppUsers.SingleAsync(user => user.Id == "app-user-employee");
+        var originalEmployeeId = deniz.EmployeeId;
+        deniz.Username = "employee.demo";
+        deniz.PasswordHash = "preserved-password-hash";
+        await dbContext.SaveChangesAsync();
+
+        await seeder.SeedAsync(CancellationToken.None);
+
+        Assert.Equal("deniz.aydin", deniz.Username);
+        Assert.Equal(originalEmployeeId, deniz.EmployeeId);
+        Assert.Equal("preserved-password-hash", deniz.PasswordHash);
+        Assert.Equal("admin.demo", (await dbContext.AppUsers.SingleAsync(user => user.Id == "app-user-admin")).Username);
+        Assert.Equal("it.demo", (await dbContext.AppUsers.SingleAsync(user => user.Id == "app-user-it")).Username);
+        Assert.DoesNotContain(
+            dbContext.AppUsers.Where(user => user.Role == AppRole.Employee),
+            user => user.Username.StartsWith("employee", StringComparison.OrdinalIgnoreCase) &&
+                user.Username.EndsWith(".demo", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Theory]
+    [InlineData("Mert Demir", "mert.demir")]
+    [InlineData("İrem Aksoy", "irem.aksoy")]
+    [InlineData("Çağrı Şahin", "cagri.sahin")]
+    [InlineData("  Mert   Demir  ", "mert.demir")]
+    public void UsernameRules_NormalizesFullName(string fullName, string expected)
+    {
+        Assert.Equal(expected, UsernameRules.FromFullName(fullName));
+    }
+
+    [Fact]
+    public async Task UsernameSuggestion_UsesFirstAvailableNumericSuffix()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext();
+        var employee = Employee("username-suggestion");
+        employee.FullName = "Mert Demir";
+        var existing = User("mert-demir-existing", AppRole.Employee);
+        existing.Username = "mert.demir";
+        existing.Email = "mert.demir@example.test";
+        var existingSecond = User("mert-demir-existing-2", AppRole.Employee);
+        existingSecond.Username = "mert.demir2";
+        existingSecond.Email = "mert.demir2@example.test";
+        dbContext.AddRange(employee, existing, existingSecond);
+        await dbContext.SaveChangesAsync();
+
+        var suggestion = await new UserService(dbContext, new PasswordHasher<AppUser>())
+            .SuggestUsernameAsync(employee.Id, CancellationToken.None);
+
+        Assert.Equal("mert.demir3", suggestion);
+    }
+
+    [Fact]
+    public async Task UserService_AutomaticallyAssignsSequentialUsernames()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext();
+        var firstEmployee = Employee("mert-first");
+        firstEmployee.FullName = "Mert Demir";
+        var secondEmployee = Employee("mert-second");
+        secondEmployee.FullName = "Mert Demir";
+        dbContext.AddRange(firstEmployee, secondEmployee);
+        await dbContext.SaveChangesAsync();
+        var service = new UserService(dbContext, new PasswordHasher<AppUser>());
+
+        var first = await service.CreateAsync(new UserCreateDto
+        {
+            EmployeeId = firstEmployee.Id,
+            Email = "mert.demir@example.test",
+            Password = "TestOnly-123!",
+            Role = "Employee"
+        }, AppRole.Admin, CancellationToken.None);
+        var second = await service.CreateAsync(new UserCreateDto
+        {
+            EmployeeId = secondEmployee.Id,
+            Email = "mert.demir2@example.test",
+            Password = "TestOnly-123!",
+            Role = "Employee"
+        }, AppRole.Admin, CancellationToken.None);
+
+        Assert.Equal(UserOperationStatus.Success, first.Status);
+        Assert.Equal("mert.demir", first.User!.Username);
+        Assert.Equal(UserOperationStatus.Success, second.Status);
+        Assert.Equal("mert.demir2", second.User!.Username);
+    }
+
+    [Fact]
+    public async Task UserService_RejectsCaseInsensitiveManualUsernameAndEmailDuplicates()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext();
+        var firstEmployee = Employee("duplicate-first");
+        var secondEmployee = Employee("duplicate-second");
+        var thirdEmployee = Employee("duplicate-third");
+        var existingUser = User("duplicate-existing", AppRole.Employee);
+        existingUser.EmployeeId = firstEmployee.Id;
+        existingUser.Username = "mert.demir";
+        existingUser.Email = "mert.demir@example.test";
+        dbContext.AddRange(firstEmployee, secondEmployee, thirdEmployee, existingUser);
+        await dbContext.SaveChangesAsync();
+        var service = new UserService(dbContext, new PasswordHasher<AppUser>());
+
+        var usernameConflict = await service.CreateAsync(new UserCreateDto
+        {
+            EmployeeId = secondEmployee.Id,
+            Username = "MERT.DEMIR",
+            Email = "other@example.test",
+            Password = "TestOnly-123!",
+            Role = "Employee"
+        }, AppRole.Admin, CancellationToken.None);
+        var emailConflict = await service.CreateAsync(new UserCreateDto
+        {
+            EmployeeId = thirdEmployee.Id,
+            Username = "other.user",
+            Email = "MERT.DEMIR@EXAMPLE.TEST",
+            Password = "TestOnly-123!",
+            Role = "Employee"
+        }, AppRole.Admin, CancellationToken.None);
+
+        Assert.Equal(UserOperationStatus.Conflict, usernameConflict.Status);
+        Assert.Equal("Bu kullanıcı adı zaten kullanılıyor.", usernameConflict.ErrorMessage);
+        Assert.Equal(UserOperationStatus.Conflict, emailConflict.Status);
+        Assert.Equal("Bu e-posta adresi zaten kullanılıyor.", emailConflict.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task Login_AcceptsUsernameOrEmailButRejectsFullNameAndWrongPassword()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext();
+        var employee = Employee("login-identifier");
+        employee.FullName = "Mert Demir";
+        var user = User("login-user", AppRole.Employee);
+        user.EmployeeId = employee.Id;
+        user.Username = "mert.demir";
+        user.Email = "mert.demir@example.test";
+        const string password = "TestOnly-123!";
+        var passwordHasher = new PasswordHasher<AppUser>();
+        user.PasswordHash = passwordHasher.HashPassword(user, password);
+        dbContext.AddRange(employee, user);
+        await dbContext.SaveChangesAsync();
+        var controller = new AuthController(
+            dbContext,
+            passwordHasher,
+            new JwtTokenService(Options.Create(new JwtOptions
+            {
+                Key = "test-only-key-with-at-least-32-characters-123456",
+                Issuer = "tests",
+                Audience = "tests",
+                ExpirationMinutes = 10
+            })));
+
+        var usernameLogin = await controller.Login(
+            new LoginRequestDto("MERT.DEMIR", password),
+            CancellationToken.None);
+        var emailLogin = await controller.Login(
+            new LoginRequestDto("MERT.DEMIR@EXAMPLE.TEST", password),
+            CancellationToken.None);
+        var fullNameLogin = await controller.Login(
+            new LoginRequestDto("Mert Demir", password),
+            CancellationToken.None);
+        var wrongPasswordLogin = await controller.Login(
+            new LoginRequestDto("mert.demir", "WrongPassword"),
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(usernameLogin.Result);
+        Assert.IsType<OkObjectResult>(emailLogin.Result);
+        Assert.IsType<UnauthorizedObjectResult>(fullNameLogin.Result);
+        Assert.IsType<UnauthorizedObjectResult>(wrongPasswordLogin.Result);
+    }
+
     [Fact]
     public async Task AuthMe_ReturnsEmployeeFullNameAndBootstrapUsernameFallback()
     {
@@ -482,11 +665,13 @@ public sealed class CoreBusinessRulesTests
         var result = service.CreateToken(new AppUser
         {
             Id = "user-1", Username = "it.test", Email = "it@example.test",
-            Role = AppRole.IT, IsActive = true
+            EmployeeId = "employee-1", Role = AppRole.IT, IsActive = true
         });
         var token = new JwtSecurityTokenHandler().ReadJwtToken(result.Token);
         Assert.Contains(token.Claims, claim =>
             claim.Type == System.Security.Claims.ClaimTypes.Role && claim.Value == "IT");
+        Assert.Contains(token.Claims, claim =>
+            claim.Type == "employeeId" && claim.Value == "employee-1");
     }
 
     [Theory]

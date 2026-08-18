@@ -77,6 +77,20 @@ export const userService = {
     }
   },
 
+  async getUsernameSuggestion(employeeId: string): Promise<string> {
+    try {
+      const response = await apiClient.get<unknown>('/api/users/username-suggestion', {
+        params: { employeeId },
+      })
+      if (!isRecord(response.data) || typeof response.data.username !== 'string') {
+        throw new Error('API geçersiz bir kullanıcı adı önerisi döndürdü.')
+      }
+      return response.data.username
+    } catch (error: unknown) {
+      throw new Error(getApiErrorMessage(error, 'Kullanıcı adı önerisi oluşturulamadı.'))
+    }
+  },
+
   async getItStaff(): Promise<ItStaffMember[]> {
     try {
       const response = await apiClient.get<unknown>('/api/users/it-staff')

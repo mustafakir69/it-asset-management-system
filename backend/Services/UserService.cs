@@ -1,9 +1,11 @@
+using System.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using TakipProgrami.Api.Data;
 using TakipProgrami.Api.DTOs;
 using TakipProgrami.Api.Entities;
+using TakipProgrami.Api.Helpers;
 
 namespace TakipProgrami.Api.Services;
 
@@ -24,6 +26,21 @@ public sealed class UserService(
     ApplicationDbContext dbContext,
     IPasswordHasher<AppUser> passwordHasher)
 {
+    public async Task<string?> SuggestUsernameAsync(
+        string employeeId,
+        CancellationToken cancellationToken)
+    {
+        var fullName = await dbContext.Employees
+            .AsNoTracking()
+            .Where(employee => employee.Id == employeeId && employee.IsActive)
+            .Select(employee => employee.FullName)
+            .FirstOrDefaultAsync(cancellationToken);
+        var baseUsername = UsernameRules.FromFullName(fullName);
+        return baseUsername is null
+            ? null
+            : await FindAvailableUsernameAsync(baseUsername, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<UserDto>> GetUsersAsync(CancellationToken cancellationToken) =>
         await dbContext.AppUsers
             .AsNoTracking()
@@ -65,9 +82,18 @@ public sealed class UserService(
             return new(UserOperationStatus.Forbidden, ErrorMessage: "IT kullanıcıları yalnızca Çalışan rolünde hesap oluşturabilir.");
         }
 
-        var username = request.Username.Trim();
-        var email = request.Email.Trim();
+        var requestedUsername = Clean(request.Username);
+        var email = Clean(request.Email)?.ToLowerInvariant();
         var employeeId = Clean(request.EmployeeId);
+
+        if (email is null)
+        {
+            return new(UserOperationStatus.ValidationError, ErrorMessage: "E-posta adresi zorunludur.");
+        }
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
 
         if (requestedRole is AppRole.Employee or AppRole.IT && employeeId is null)
         {
@@ -100,12 +126,33 @@ public sealed class UserService(
             }
         }
 
-        if (await dbContext.AppUsers.AnyAsync(user => user.Username == username, cancellationToken))
+        var username = requestedUsername is null
+            ? UsernameRules.FromFullName(employee?.FullName)
+            : UsernameRules.Normalize(requestedUsername);
+        if (username is null || username.Length < 3)
+        {
+            return new(
+                UserOperationStatus.ValidationError,
+                ErrorMessage: requestedUsername is null
+                    ? "Ad Soyad bilgisi kullanıcı adı oluşturmak için uygun değil."
+                    : "Kullanıcı adı oluşturulamadı.");
+        }
+
+        if (requestedUsername is null)
+        {
+            username = await FindAvailableUsernameAsync(username, cancellationToken);
+        }
+
+        if (await dbContext.AppUsers.AnyAsync(
+                user => user.Username.ToLower() == username.ToLower(),
+                cancellationToken))
         {
             return new(UserOperationStatus.Conflict, ErrorMessage: "Bu kullanıcı adı zaten kullanılıyor.");
         }
 
-        if (await dbContext.AppUsers.AnyAsync(user => user.Email == email, cancellationToken))
+        if (await dbContext.AppUsers.AnyAsync(
+                user => user.Email.ToLower() == email.ToLower(),
+                cancellationToken))
         {
             return new(UserOperationStatus.Conflict, ErrorMessage: "Bu e-posta adresi zaten kullanılıyor.");
         }
@@ -127,12 +174,25 @@ public sealed class UserService(
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             return new(UserOperationStatus.Success, ToDto(user));
         }
         catch (DbUpdateException exception) when (IsUniqueViolation(exception))
         {
-            return new(UserOperationStatus.Conflict, ErrorMessage: "Kullanıcı adı, e-posta veya çalışan hesabı zaten kullanılıyor.");
+            return new(UserOperationStatus.Conflict, ErrorMessage: GetUniqueViolationMessage(exception));
         }
+    }
+
+    private async Task<string> FindAvailableUsernameAsync(
+        string baseUsername,
+        CancellationToken cancellationToken)
+    {
+        var existingUsernames = await dbContext.AppUsers
+            .AsNoTracking()
+            .Select(user => user.Username)
+            .ToListAsync(cancellationToken);
+        var used = existingUsernames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return UsernameRules.FirstAvailable(baseUsername, used);
     }
 
     private static UserDto ToDto(AppUser user) => new(
@@ -164,4 +224,16 @@ public sealed class UserService(
 
     private static bool IsUniqueViolation(DbUpdateException exception) =>
         exception.InnerException is SqlException { Number: 2601 or 2627 };
+
+    private static string GetUniqueViolationMessage(DbUpdateException exception)
+    {
+        var detail = exception.InnerException?.Message ?? exception.Message;
+        if (detail.Contains("UX_AppUsers_Username", StringComparison.OrdinalIgnoreCase))
+            return "Bu kullanıcı adı zaten kullanılıyor.";
+        if (detail.Contains("UX_AppUsers_Email", StringComparison.OrdinalIgnoreCase))
+            return "Bu e-posta adresi zaten kullanılıyor.";
+        if (detail.Contains("UX_AppUsers_EmployeeId", StringComparison.OrdinalIgnoreCase))
+            return "Seçilen çalışanın zaten bir kullanıcı hesabı var.";
+        return "Kullanıcı adı, e-posta veya çalışan hesabı zaten kullanılıyor.";
+    }
 }

@@ -15,13 +15,14 @@ public sealed record UserDto(
     bool IsActive,
     string Status);
 
+public sealed record UsernameSuggestionDto(string Username);
+
 public sealed class UserCreateDto
 {
     public string? EmployeeId { get; init; }
 
-    [Required(ErrorMessage = "Kullanıcı adı zorunludur.")]
     [StringLength(100, MinimumLength = 3, ErrorMessage = "Kullanıcı adı 3-100 karakter arasında olmalıdır.")]
-    public string Username { get; init; } = string.Empty;
+    public string? Username { get; init; }
 
     [Required(ErrorMessage = "E-posta adresi zorunludur.")]
     [EmailAddress(ErrorMessage = "Geçerli bir e-posta adresi girin.")]

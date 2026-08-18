@@ -19,6 +19,22 @@ public sealed class UsersController(UserService userService) : ControllerBase
         CancellationToken cancellationToken) =>
         Ok(await userService.GetUsersAsync(cancellationToken));
 
+    [HttpGet("username-suggestion")]
+    [ProducesResponseType<UsernameSuggestionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<UsernameSuggestionDto>> GetUsernameSuggestion(
+        [FromQuery] string employeeId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(employeeId))
+            return ProblemResponse(StatusCodes.Status400BadRequest, "Kullanıcı adı oluşturulamadı", "Çalışan seçimi zorunludur.");
+
+        var username = await userService.SuggestUsernameAsync(employeeId.Trim(), cancellationToken);
+        return username is null
+            ? ProblemResponse(StatusCodes.Status400BadRequest, "Kullanıcı adı oluşturulamadı", "Ad Soyad bilgisi kullanıcı adı oluşturmak için uygun değil.")
+            : Ok(new UsernameSuggestionDto(username));
+    }
+
     [HttpGet("it-staff")]
     public async Task<ActionResult> GetItStaff([FromServices] TakipProgrami.Api.Data.ApplicationDbContext db, CancellationToken cancellationToken) =>
         Ok(await db.AppUsers.AsNoTracking().Where(x => x.IsActive && x.Role == AppRole.IT && x.EmployeeId != null)

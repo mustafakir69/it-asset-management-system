@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using TakipProgrami.Api.Data;
 using TakipProgrami.Api.Entities;
+using TakipProgrami.Api.Helpers;
 
 namespace TakipProgrami.Api.Services;
 
@@ -63,6 +64,7 @@ public sealed class DevelopmentDataSeeder(
 
         var allUsers = await db.AppUsers.ToListAsync(ct);
         var admin = allUsers.FirstOrDefault(x => x.Id == "app-user-admin");
+        var isNewAdmin = admin is null;
         if (admin is null)
         {
             admin = new AppUser { Id = "app-user-admin", CreatedAt = now };
@@ -75,16 +77,33 @@ public sealed class DevelopmentDataSeeder(
         admin.Email = "admin.demo@example.test";
         admin.Role = AppRole.Admin;
         admin.IsActive = true;
-        admin.PasswordHash = passwordHasher.HashPassword(admin, password);
+        if (isNewAdmin) admin.PasswordHash = passwordHasher.HashPassword(admin, password);
+
+        var seededEmployeeIds = Enumerable.Range(1, 30)
+            .Select(number => $"employee-db-{number:000}")
+            .ToHashSet(StringComparer.Ordinal);
+        var usedUsernames = allUsers
+            .Where(user => user.EmployeeId is null ||
+                !seededEmployeeIds.Contains(user.EmployeeId) ||
+                user.EmployeeId == "employee-db-010")
+            .Select(user => user.Username)
+            .Where(username => !string.IsNullOrWhiteSpace(username))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         for (var number = 1; number <= 30; number++)
         {
             var employeeId = $"employee-db-{number:000}";
             var role = number is 10 or 11 ? AppRole.IT : AppRole.Employee;
             var userId = number switch { 1 => "app-user-employee", 10 => "app-user-it", _ => $"app-user-employee-{number:000}" };
-            var username = number switch { 1 => "employee.demo", 10 => "it.demo", 11 => "it2.demo", _ => $"employee{number:00}.demo" };
+            var baseUsername = UsernameRules.FromFullName(employees[employeeId].FullName)
+                ?? throw new InvalidOperationException($"{employeeId} için kullanıcı adı oluşturulamadı.");
+            var username = number == 10
+                ? "it.demo"
+                : UsernameRules.FirstAvailable(baseUsername, usedUsernames);
+            usedUsernames.Add(username);
             var user = allUsers.FirstOrDefault(x => x.EmployeeId == employeeId)
                 ?? allUsers.FirstOrDefault(x => x.Id == userId);
+            var isNewUser = user is null;
 
             if (user is null)
             {
@@ -98,7 +117,7 @@ public sealed class DevelopmentDataSeeder(
             user.Email = employees[employeeId].CorporateEmail;
             user.Role = role;
             user.IsActive = true;
-            user.PasswordHash = passwordHasher.HashPassword(user, password);
+            if (isNewUser) user.PasswordHash = passwordHasher.HashPassword(user, password);
         }
         await db.SaveChangesAsync(ct);
 

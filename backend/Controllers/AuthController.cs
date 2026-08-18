@@ -28,10 +28,12 @@ public sealed class AuthController(
         CancellationToken cancellationToken)
     {
         var identifier = request.Identifier.Trim();
+        var normalizedIdentifier = identifier.ToLowerInvariant();
         var user = await dbContext.AppUsers
             .Include(current => current.Employee)
             .FirstOrDefaultAsync(
-                current => current.Username == identifier || current.Email == identifier,
+                current => current.Username.ToLower() == normalizedIdentifier ||
+                    current.Email.ToLower() == normalizedIdentifier,
                 cancellationToken);
 
         if (user is null || passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password)

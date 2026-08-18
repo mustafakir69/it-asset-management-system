@@ -31,10 +31,13 @@ function UserCreatePage() {
   const { role: currentRole } = useAuth()
   const [form] = Form.useForm<UserFormValues>()
   const selectedRole = Form.useWatch('role', form)
+  const selectedEmployeeId = Form.useWatch('employeeId', form)
   const [employees, setEmployees] = useState<Employee[]>([])
   const [usedEmployeeIds, setUsedEmployeeIds] = useState<ReadonlySet<string>>(new Set())
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUsernameLoading, setIsUsernameLoading] = useState(false)
+  const [isUsernameManuallyEdited, setIsUsernameManuallyEdited] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const loadFormData = useCallback(async () => {
@@ -61,8 +64,33 @@ function UserCreatePage() {
   useEffect(() => {
     if (selectedRole === 'Admin') {
       form.setFieldValue('employeeId', undefined)
+      if (!isUsernameManuallyEdited) form.setFieldValue('username', undefined)
     }
-  }, [form, selectedRole])
+  }, [form, isUsernameManuallyEdited, selectedRole])
+
+  useEffect(() => {
+    if (!selectedEmployeeId || selectedRole === 'Admin' || isUsernameManuallyEdited) return
+
+    let isCurrent = true
+    setIsUsernameLoading(true)
+    void userService.getUsernameSuggestion(selectedEmployeeId)
+      .then((username) => {
+        if (isCurrent) form.setFieldValue('username', username)
+      })
+      .catch((error: unknown) => {
+        if (isCurrent) {
+          form.setFieldValue('username', undefined)
+          void message.error(error instanceof Error ? error.message : 'Kullanıcı adı önerisi oluşturulamadı.')
+        }
+      })
+      .finally(() => {
+        if (isCurrent) setIsUsernameLoading(false)
+      })
+
+    return () => {
+      isCurrent = false
+    }
+  }, [form, isUsernameManuallyEdited, message, selectedEmployeeId, selectedRole])
 
   const employeeOptions = useMemo(
     () => employees
@@ -77,7 +105,9 @@ function UserCreatePage() {
   const handleSubmit = async (values: UserFormValues) => {
     const input: CreateUserInput = {
       employeeId: values.employeeId ?? null,
-      username: values.username.trim(),
+      username: selectedRole !== 'Admin' && !isUsernameManuallyEdited
+        ? ''
+        : values.username.trim(),
       email: values.email.trim(),
       password: values.password,
       role: currentRole === 'IT' ? 'Employee' : values.role,
@@ -85,8 +115,8 @@ function UserCreatePage() {
 
     setIsSubmitting(true)
     try {
-      await userService.createUser(input)
-      message.success('Kullanıcı hesabı başarıyla oluşturuldu.')
+      const createdUser = await userService.createUser(input)
+      message.success(`Kullanıcı hesabı ${createdUser.username} adıyla oluşturuldu.`)
       void navigate('/admin/users')
     } catch (error: unknown) {
       message.error(error instanceof Error ? error.message : 'Kullanıcı oluşturulamadı.')
@@ -148,6 +178,7 @@ function UserCreatePage() {
                     disabled={selectedRole === 'Admin'}
                     optionFilterProp="label"
                     options={employeeOptions}
+                    onChange={() => setIsUsernameManuallyEdited(false)}
                     placeholder="Çalışan seçin"
                     showSearch
                   />
@@ -155,6 +186,11 @@ function UserCreatePage() {
               </Col>
               <Col xs={24} md={12}>
                 <Form.Item
+                  extra={selectedRole === 'Admin'
+                    ? 'Bootstrap yönetici hesabı için kullanıcı adını girin.'
+                    : isUsernameManuallyEdited
+                      ? 'Kullanıcı adı manuel olarak değiştirildi.'
+                      : 'Çalışanın Ad Soyad bilgisinden otomatik önerilir.'}
                   label="Kullanıcı Adı"
                   name="username"
                   rules={[
@@ -162,7 +198,12 @@ function UserCreatePage() {
                     { min: 3, max: 100, message: 'Kullanıcı adı 3-100 karakter arasında olmalıdır.' },
                   ]}
                 >
-                  <Input autoComplete="username" placeholder="Örn. kullanici.adi" />
+                  <Input
+                    autoComplete="username"
+                    disabled={isUsernameLoading}
+                    onChange={() => setIsUsernameManuallyEdited(true)}
+                    placeholder={isUsernameLoading ? 'Kullanıcı adı oluşturuluyor...' : 'Örn. kullanici.adi'}
+                  />
                 </Form.Item>
               </Col>
               <Col xs={24} md={12}>
