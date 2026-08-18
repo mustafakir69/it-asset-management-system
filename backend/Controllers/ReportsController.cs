@@ -61,6 +61,58 @@ public sealed class ReportsController(ReportsService reportsService) : Controlle
         return Csv(CsvExporter.Maintenance(report.Records), "bakim-raporu.csv");
     }
 
+    [HttpGet("warranties")]
+    public async Task<ActionResult<IReadOnlyList<WarrantyReportDto>>> Warranties(
+        string? warrantyStatus,
+        string? assetStatus,
+        CancellationToken cancellationToken) =>
+        Ok(await reportsService.GetWarrantiesAsync(warrantyStatus, assetStatus, cancellationToken));
+
+    [HttpGet("warranties/csv")]
+    public async Task<IActionResult> WarrantiesCsv(
+        string? warrantyStatus,
+        string? assetStatus,
+        CancellationToken cancellationToken) =>
+        Csv(
+            CsvExporter.Warranties(await reportsService.GetWarrantiesAsync(
+                warrantyStatus,
+                assetStatus,
+                cancellationToken)),
+            "garanti-raporu.csv");
+
+    [HttpGet("licenses")]
+    public async Task<ActionResult<IReadOnlyList<LicenseReportDto>>> Licenses(
+        string? status,
+        CancellationToken cancellationToken) =>
+        Ok(await reportsService.GetLicensesAsync(status, cancellationToken));
+
+    [HttpGet("licenses/csv")]
+    public async Task<IActionResult> LicensesCsv(
+        string? status,
+        CancellationToken cancellationToken) =>
+        Csv(
+            CsvExporter.Licenses(await reportsService.GetLicensesAsync(status, cancellationToken)),
+            "lisans-raporu.csv");
+
+    [HttpGet("support-requests")]
+    public async Task<ActionResult<IReadOnlyList<SupportReportDto>>> SupportRequests(
+        string? status,
+        string? priority,
+        CancellationToken cancellationToken) =>
+        Ok(await reportsService.GetSupportRequestsAsync(status, priority, cancellationToken));
+
+    [HttpGet("support-requests/csv")]
+    public async Task<IActionResult> SupportRequestsCsv(
+        string? status,
+        string? priority,
+        CancellationToken cancellationToken) =>
+        Csv(
+            CsvExporter.SupportRequests(await reportsService.GetSupportRequestsAsync(
+                status,
+                priority,
+                cancellationToken)),
+            "teknik-destek-raporu.csv");
+
     private FileContentResult Csv(byte[] content, string fileName) =>
         File(content, "text/csv; charset=utf-8", fileName);
 }

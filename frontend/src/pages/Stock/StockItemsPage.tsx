@@ -1,11 +1,15 @@
 import {
   ClearOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  DatabaseOutlined,
   EditOutlined,
   EyeOutlined,
   MoreOutlined,
   PlusOutlined,
   SearchOutlined,
   SwapOutlined,
+  WarningOutlined,
 } from '@ant-design/icons'
 import {
   Button,
@@ -22,8 +26,8 @@ import {
 } from 'antd'
 import type { MenuProps, TableColumnsType, TablePaginationConfig } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ContentCard, EmptyState, ErrorState, LoadingState, PageHeader } from '../../components'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { ActionStatisticCard, ContentCard, EmptyState, ErrorState, LoadingState, PageHeader } from '../../components'
 import { stockService } from '../../services/stockService'
 import type { StockItem, StockStatus } from '../../types/stockItem'
 import StockTransactionModal from './StockTransactionModal'
@@ -42,6 +46,8 @@ interface StockPagination {
   pageSize: number
 }
 
+type StockSummaryView = 'all' | 'normal' | 'critical' | 'depleted'
+
 const initialFilters: StockFilters = {
   search: '',
 }
@@ -56,6 +62,7 @@ const getStockStatus = (item: StockItem): StockStatus =>
 
 function StockItemsPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [stockItems, setStockItems] = useState<StockItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -63,6 +70,12 @@ function StockItemsPage() {
   const [pagination, setPagination] = useState<StockPagination>({ current: 1, pageSize: 10 })
   const [transactionStockItem, setTransactionStockItem] = useState<StockItem | null>(null)
   const [minimumStockItem, setMinimumStockItem] = useState<StockItem | null>(null)
+  const requestedView = searchParams.get('view')
+  const [summaryView, setSummaryView] = useState<StockSummaryView>(
+    requestedView === 'normal' || requestedView === 'critical' || requestedView === 'depleted'
+      ? requestedView
+      : 'all',
+  )
 
   const loadStockItems = useCallback(async () => {
     setIsLoading(true)
@@ -114,19 +127,43 @@ function StockItemsPage() {
         (!filters.category || item.category === filters.category) &&
         (!filters.status || getStockStatus(item) === filters.status) &&
         (!filters.location || item.location === filters.location)
+        && (summaryView === 'all' ||
+          (summaryView === 'normal' && item.currentQuantity > item.minimumQuantity) ||
+          (summaryView === 'critical' && item.currentQuantity > 0 && item.currentQuantity <= item.minimumQuantity) ||
+          (summaryView === 'depleted' && item.currentQuantity === 0))
       )
     })
-  }, [filters, stockItems])
+  }, [filters, stockItems, summaryView])
 
   const updateFilters = (nextFilters: Partial<StockFilters>) => {
     setFilters((current) => ({ ...current, ...nextFilters }))
+    if (Object.hasOwn(nextFilters, 'status')) {
+      setSummaryView('all')
+      setSearchParams({})
+    }
     setPagination((current) => ({ ...current, current: 1 }))
   }
 
   const clearFilters = () => {
     setFilters(initialFilters)
+    setSummaryView('all')
+    setSearchParams({})
     setPagination((current) => ({ ...current, current: 1 }))
   }
+
+  const selectSummary = (view: StockSummaryView) => {
+    setSummaryView(view)
+    setFilters(initialFilters)
+    setSearchParams(view === 'all' ? {} : { view })
+    setPagination((current) => ({ ...current, current: 1 }))
+  }
+
+  const summaries = useMemo(() => ({
+    total: stockItems.length,
+    normal: stockItems.filter((item) => item.currentQuantity > item.minimumQuantity).length,
+    critical: stockItems.filter((item) => item.currentQuantity > 0 && item.currentQuantity <= item.minimumQuantity).length,
+    depleted: stockItems.filter((item) => item.currentQuantity === 0).length,
+  }), [stockItems])
 
   const handlePaginationChange = (nextPagination: TablePaginationConfig) => {
     setPagination({
@@ -226,8 +263,8 @@ function StockItemsPage() {
       align: 'center',
       width: 85,
       render: (_value, item) => {
-        const status = getStockStatus(item)
-        return <Tag color={status === 'Kritik' ? 'error' : 'success'}>{status}</Tag>
+        const status = item.currentQuantity === 0 ? 'Tükendi' : getStockStatus(item)
+        return <Tag color={status === 'Tükendi' ? 'default' : status === 'Kritik' ? 'error' : 'success'}>{status}</Tag>
       },
     },
     {
@@ -256,6 +293,15 @@ function StockItemsPage() {
           </Button>
         }
       />
+
+      {!isLoading && !loadError && (
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Col xs={24} sm={12} xl={6}><ActionStatisticCard active={summaryView === 'all'} color="#1677ff" icon={<DatabaseOutlined />} onClick={() => selectSummary('all')} title="Toplam Ürün" value={summaries.total} /></Col>
+          <Col xs={24} sm={12} xl={6}><ActionStatisticCard active={summaryView === 'normal'} color="#389e0d" icon={<CheckCircleOutlined />} onClick={() => selectSummary('normal')} title="Normal" value={summaries.normal} /></Col>
+          <Col xs={24} sm={12} xl={6}><ActionStatisticCard active={summaryView === 'critical'} color="#d48806" icon={<WarningOutlined />} onClick={() => selectSummary('critical')} title="Kritik" value={summaries.critical} /></Col>
+          <Col xs={24} sm={12} xl={6}><ActionStatisticCard active={summaryView === 'depleted'} color="#cf1322" icon={<CloseCircleOutlined />} onClick={() => selectSummary('depleted')} title="Tükenen" value={summaries.depleted} /></Col>
+        </Row>
+      )}
 
       <ContentCard>
         {isLoading ? (

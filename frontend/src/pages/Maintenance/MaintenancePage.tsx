@@ -1,9 +1,10 @@
 import { PlusOutlined } from '@ant-design/icons'
-import { Button, Space, Table, Tabs, Typography } from 'antd'
+import { Button, Col, Row, Space, Table, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
+  ActionStatisticCard,
   ContentCard,
   EmptyState,
   ErrorState,
@@ -173,45 +174,37 @@ function MaintenancePage() {
       ) : error ? (
         <ContentCard><ErrorState message={error} onRetry={() => void load()} /></ContentCard>
       ) : (
-        <ContentCard>
-          <Tabs
-            activeKey={activeView}
-            items={[
-              {
-                key: 'upcoming',
-                label: `Yaklaşan (${taskSets.upcoming.length})`,
-                children: taskTable('upcoming'),
-              },
-              {
-                key: 'overdue',
-                label: `Geciken (${taskSets.overdue.length})`,
-                children: taskTable('overdue'),
-              },
-              {
-                key: 'completed',
-                label: `Tamamlanan (${taskSets.completed.length})`,
-                children: taskTable('completed'),
-              },
-              {
-                key: 'plans',
-                label: `Planlar (${plans.length})`,
-                children: (
-                  <Table<MaintenancePlan>
-                    columns={planColumns}
-                    dataSource={plans}
-                    locale={{ emptyText: <EmptyState description={emptyDescriptions.plans} /> }}
-                    pagination={{ pageSize: 10 }}
-                    rowKey="id"
-                    scroll={{ x: 850 }}
-                    size="small"
-                    tableLayout="fixed"
-                  />
-                ),
-              },
-            ]}
-            onChange={changeView}
-          />
-        </ContentCard>
+        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} xl={6}>
+              <ActionStatisticCard active={activeView === 'upcoming'} onClick={() => changeView('upcoming')} title="Yaklaşan" value={taskSets.upcoming.length} />
+            </Col>
+            <Col xs={24} sm={12} xl={6}>
+              <ActionStatisticCard active={activeView === 'overdue'} onClick={() => changeView('overdue')} title="Geciken" value={taskSets.overdue.length} />
+            </Col>
+            <Col xs={24} sm={12} xl={6}>
+              <ActionStatisticCard active={activeView === 'completed'} onClick={() => changeView('completed')} title="Tamamlanan" value={taskSets.completed.length} />
+            </Col>
+            <Col xs={24} sm={12} xl={6}>
+              <ActionStatisticCard active={activeView === 'plans'} onClick={() => changeView('plans')} title="Planlar" value={plans.length} />
+            </Col>
+          </Row>
+
+          <ContentCard>
+            {activeView === 'plans' ? (
+              <Table<MaintenancePlan>
+                columns={planColumns}
+                dataSource={plans}
+                locale={{ emptyText: <EmptyState description={emptyDescriptions.plans} /> }}
+                pagination={{ pageSize: 10 }}
+                rowKey="id"
+                scroll={{ x: 850 }}
+                size="small"
+                tableLayout="fixed"
+              />
+            ) : taskTable(activeView)}
+          </ContentCard>
+        </Space>
       )}
     </section>
   )

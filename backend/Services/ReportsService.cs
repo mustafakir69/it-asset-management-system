@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TakipProgrami.Api.Data;
 using TakipProgrami.Api.DTOs;
 using TakipProgrami.Api.Entities;
+using TakipProgrami.Api.Helpers;
 
 namespace TakipProgrami.Api.Services;
 
@@ -156,6 +157,140 @@ public sealed class ReportsService(ApplicationDbContext dbContext)
         return new MaintenanceReportResponseDto(summary, records);
     }
 
+    public async Task<IReadOnlyList<WarrantyReportDto>> GetWarrantiesAsync(
+        string? warrantyStatus,
+        string? assetStatus,
+        CancellationToken cancellationToken)
+    {
+        var assets = await dbContext.Assets.AsNoTracking()
+            .Select(asset => new
+            {
+                asset.AssetCode,
+                AssetName = asset.Brand + " " + asset.Model,
+                asset.Category,
+                asset.WarrantyEndDate,
+                AssetStatus = asset.Status,
+                CurrentAssignee = asset.Assignments
+                    .Where(assignment => assignment.ReturnedAt == null)
+                    .Select(assignment => new
+                    {
+                        Name = assignment.Employee.FullName,
+                        assignment.Employee.Department
+                    })
+                    .FirstOrDefault()
+            })
+            .OrderBy(item => item.AssetCode)
+            .ToListAsync(cancellationToken);
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var records = assets.Select(item =>
+        {
+            var calculation = WarrantyRules.Calculate(item.WarrantyEndDate, today);
+            return new WarrantyReportDto(
+                item.AssetCode,
+                item.AssetName,
+                item.Category,
+                item.WarrantyEndDate,
+                calculation.Status,
+                item.AssetStatus,
+                item.CurrentAssignee?.Name,
+                item.CurrentAssignee?.Department);
+        });
+
+        if (!string.IsNullOrWhiteSpace(warrantyStatus))
+            records = records.Where(item => item.WarrantyStatus == warrantyStatus.Trim());
+        if (!string.IsNullOrWhiteSpace(assetStatus))
+            records = records.Where(item => item.AssetStatus == assetStatus.Trim());
+        return records.ToList();
+    }
+
+    public async Task<IReadOnlyList<LicenseReportDto>> GetLicensesAsync(
+        string? status,
+        CancellationToken cancellationToken)
+    {
+        var licenses = await dbContext.Licenses.AsNoTracking()
+            .Select(license => new
+            {
+                license.LicenseCode,
+                license.ProductName,
+                license.Vendor,
+                license.LicenseType,
+                license.TotalSeats,
+                UsedSeats = license.Assignments.Count(assignment => assignment.RevokedAt == null),
+                license.ExpirationDate,
+                license.IsActive
+            })
+            .OrderBy(item => item.LicenseCode)
+            .ToListAsync(cancellationToken);
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var records = licenses.Select(item => new LicenseReportDto(
+            item.LicenseCode,
+            item.ProductName,
+            item.Vendor,
+            item.LicenseType,
+            item.TotalSeats,
+            item.UsedSeats,
+            item.TotalSeats - item.UsedSeats,
+            item.ExpirationDate,
+            LicenseStatus(item.IsActive, item.ExpirationDate, today)));
+        if (!string.IsNullOrWhiteSpace(status))
+            records = records.Where(item => item.Status == status.Trim());
+        return records.ToList();
+    }
+
+    public async Task<IReadOnlyList<SupportReportDto>> GetSupportRequestsAsync(
+        string? status,
+        string? priority,
+        CancellationToken cancellationToken)
+    {
+        var requests = await dbContext.MaintenanceRequests.AsNoTracking()
+            .Select(request => new
+            {
+                request.Id,
+                request.Asset.AssetCode,
+                AssetName = request.Asset.Brand + " " + request.Asset.Model,
+                RequestedByName = request.RequestedByEmployee.FullName,
+                Department = request.RequestedByEmployee.Department,
+                request.Priority,
+                request.Status,
+                AssignedToName = request.AssignedToUser == null
+                    ? null
+                    : request.AssignedToUser.Employee != null
+                        ? request.AssignedToUser.Employee.FullName
+                        : request.AssignedToUser.Username,
+                request.CreatedAt,
+                request.CompletedAt,
+                CompletedByName = request.CompletedByUser == null
+                    ? null
+                    : request.CompletedByUser.Employee != null
+                        ? request.CompletedByUser.Employee.FullName
+                        : request.CompletedByUser.Username,
+                request.Result
+            })
+            .OrderByDescending(item => item.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        IEnumerable<SupportReportDto> records = requests.Select(request => new SupportReportDto(
+            "BT-" + request.Id[..Math.Min(8, request.Id.Length)].ToUpperInvariant(),
+            request.AssetCode,
+            request.AssetName,
+            request.RequestedByName,
+            request.Department,
+            RequestPriority(request.Priority),
+            RequestStatus(request.Status),
+            request.AssignedToName,
+            request.CreatedAt,
+            request.CompletedAt,
+            request.CompletedByName,
+            request.Result));
+        if (!string.IsNullOrWhiteSpace(status))
+            records = records.Where(item => item.Status == status.Trim());
+        if (!string.IsNullOrWhiteSpace(priority))
+            records = records.Where(item => item.Priority == priority.Trim());
+        return records.ToList();
+    }
+
     private static string TaskStatus(MaintenanceTask task, DateOnly today) => task.Status switch
     {
         MaintenanceTaskStatus.Completed => "Tamamlandı",
@@ -172,4 +307,22 @@ public sealed class ReportsService(ApplicationDbContext dbContext)
         MaintenanceRequestStatus.Cancelled => "İptal Edildi",
         _ => "Açık"
     };
+
+    private static string RequestPriority(MaintenanceRequestPriority priority) => priority switch
+    {
+        MaintenanceRequestPriority.Low => "Düşük",
+        MaintenanceRequestPriority.High => "Yüksek",
+        MaintenanceRequestPriority.Critical => "Kritik",
+        _ => "Normal"
+    };
+
+    private static string LicenseStatus(bool isActive, DateOnly? expirationDate, DateOnly today) =>
+        !isActive
+            ? "Pasif"
+            : expirationDate switch
+            {
+                { } date when date < today => "Süresi Doldu",
+                { } date when date.DayNumber - today.DayNumber <= 30 => "Yaklaşıyor",
+                _ => "Aktif"
+            };
 }

@@ -543,6 +543,121 @@ public sealed class CoreBusinessRulesTests
     }
 
     [Fact]
+    public async Task MaintenanceCompletion_ReturnsInMaintenanceAssetToAvailable()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext();
+        var asset = Asset("maintenance-status-asset", AssetLifecycleRules.InMaintenance);
+        var user = User("maintenance-status-it", AppRole.IT);
+        var plan = new MaintenancePlan
+        {
+            Id = "maintenance-status-plan",
+            AssetId = asset.Id,
+            Name = "Periyodik kontrol",
+            FrequencyDays = 90,
+            StartDate = new DateOnly(2026, 8, 18),
+            ResponsibleUserId = user.Id,
+            EstimatedDurationMinutes = 30,
+            ReminderLeadDays = 5,
+            NextDueAt = new DateOnly(2026, 8, 18),
+            IsActive = false,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        var task = new MaintenanceTask
+        {
+            Id = "maintenance-status-task",
+            MaintenancePlanId = plan.Id,
+            AssetId = asset.Id,
+            Title = "Periyodik kontrol",
+            PlannedDate = new DateOnly(2026, 8, 18),
+            Status = MaintenanceTaskStatus.Planned,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        dbContext.AddRange(asset, user, plan, task);
+        await dbContext.SaveChangesAsync();
+        var controller = WithUser(
+            new MaintenanceTasksController(dbContext),
+            user.Id,
+            AppRole.IT);
+
+        var result = await controller.Complete(task.Id, new MaintenanceTaskCompleteDto
+        {
+            CompletedDate = new DateOnly(2026, 8, 18),
+            Result = "Kontroller tamamlandı.",
+            WorkNotes = "Donanım ve güncellemeler kontrol edildi."
+        }, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(AssetLifecycleRules.Available, asset.Status);
+        var movement = await dbContext.AssetMovements.SingleAsync();
+        Assert.Equal(AssetLifecycleRules.InMaintenance, movement.PreviousStatus);
+        Assert.Equal(AssetLifecycleRules.Available, movement.NewStatus);
+    }
+
+    [Fact]
+    public async Task AssetUpdate_DoesNotCreateMovementForInformationOnlyChange()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext();
+        var asset = Asset("information-update-asset", AssetLifecycleRules.Available);
+        var user = User("information-update-it", AppRole.IT);
+        dbContext.AddRange(asset, user);
+        await dbContext.SaveChangesAsync();
+        var controller = WithUser(
+            new AssetsController(dbContext, new AssetLifecycleService(dbContext)),
+            user.Id,
+            AppRole.IT);
+
+        var result = await controller.Update(asset.Id, new AssetUpdateDto
+        {
+            AssetCode = asset.AssetCode,
+            Category = asset.Category,
+            Brand = asset.Brand,
+            Model = asset.Model,
+            SerialNumber = asset.SerialNumber,
+            Status = asset.Status,
+            Location = "Ankara Ofis",
+            PurchaseDate = asset.PurchaseDate,
+            WarrantyEndDate = asset.WarrantyEndDate
+        }, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal("Ankara Ofis", asset.Location);
+        Assert.Empty(dbContext.AssetMovements);
+    }
+
+    [Fact]
+    public async Task AssetUpdate_CannotRestoreCriticalStatusThroughGeneralEdit()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext();
+        var asset = Asset("critical-edit-asset", AssetLifecycleRules.Lost);
+        var user = User("critical-edit-it", AppRole.IT);
+        dbContext.AddRange(asset, user);
+        await dbContext.SaveChangesAsync();
+        var controller = WithUser(
+            new AssetsController(dbContext, new AssetLifecycleService(dbContext)),
+            user.Id,
+            AppRole.IT);
+
+        var result = await controller.Update(asset.Id, new AssetUpdateDto
+        {
+            AssetCode = asset.AssetCode,
+            Category = asset.Category,
+            Brand = asset.Brand,
+            Model = asset.Model,
+            SerialNumber = asset.SerialNumber,
+            Status = AssetLifecycleRules.Available,
+            Location = asset.Location,
+            PurchaseDate = asset.PurchaseDate,
+            WarrantyEndDate = asset.WarrantyEndDate
+        }, CancellationToken.None);
+
+        var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
+        var problem = Assert.IsType<ProblemDetails>(conflict.Value);
+        Assert.Contains("genel düzenleme", problem.Detail);
+        Assert.Equal(AssetLifecycleRules.Lost, asset.Status);
+        Assert.Empty(dbContext.AssetMovements);
+    }
+
+    [Fact]
     public async Task StockTransaction_UsesCurrentUserAndRealRecipient()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext();
@@ -820,19 +935,6 @@ public sealed class CoreBusinessRulesTests
 
         Assert.Equal(StockTransactionResultStatus.InsufficientStock, result.Status);
         Assert.Equal(1, item.CurrentQuantity);
-    }
-
-    [Fact]
-    public void LicenseValidation_RejectsUsedSeatsAboveTotalSeats()
-    {
-        var dto = new LicenseCreateDto
-        {
-            LicenseCode = "LIC-1", ProductName = "Ürün", Vendor = "Sağlayıcı",
-            LicenseType = "Abonelik", TotalSeats = 5, UsedSeats = 6,
-            StartDate = new DateOnly(2026, 1, 1), IsActive = true
-        };
-        var results = Validate(dto);
-        Assert.Contains(results, result => result.MemberNames.Contains(nameof(dto.UsedSeats)));
     }
 
     [Fact]

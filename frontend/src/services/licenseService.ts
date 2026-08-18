@@ -3,6 +3,8 @@ import {
   licenseStatuses,
   type License,
   type LicenseInput,
+  type LicenseAssignment,
+  type LicenseAssignmentInput,
   type LicenseStatus,
 } from '../types/license'
 import { apiClient } from './api'
@@ -12,6 +14,10 @@ export interface LicenseService {
   getLicenseById: (id: string) => Promise<License | undefined>
   createLicense: (license: LicenseInput) => Promise<License>
   updateLicense: (id: string, license: LicenseInput) => Promise<License>
+  getAssignments: (id: string) => Promise<LicenseAssignment[]>
+  getAssetAssignments: (assetId: string) => Promise<LicenseAssignment[]>
+  createAssignment: (id: string, input: LicenseAssignmentInput) => Promise<LicenseAssignment>
+  revokeAssignment: (licenseId: string, assignmentId: string) => Promise<LicenseAssignment>
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -79,6 +85,41 @@ const mapLicenseResponse = (value: unknown): License => {
     notes: typeof notes === 'string' ? notes : undefined,
     licenseStatus,
   }
+}
+
+const nullableString = (value: unknown): value is string | null =>
+  value === null || typeof value === 'string'
+
+const mapAssignmentResponse = (value: unknown): LicenseAssignment => {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== 'string' ||
+    typeof value.licenseId !== 'string' ||
+    typeof value.licenseCode !== 'string' ||
+    typeof value.productName !== 'string' ||
+    typeof value.licenseType !== 'string' ||
+    !nullableString(value.employeeId) ||
+    !nullableString(value.employeeName) ||
+    !nullableString(value.employeeDepartment) ||
+    !nullableString(value.assetId) ||
+    !nullableString(value.assetCode) ||
+    !nullableString(value.assetName) ||
+    typeof value.assignedAt !== 'string' ||
+    typeof value.assignedByUserId !== 'string' ||
+    typeof value.assignedByName !== 'string' ||
+    !nullableString(value.revokedAt) ||
+    !nullableString(value.revokedByUserId) ||
+    !nullableString(value.revokedByName) ||
+    (value.status !== 'Aktif' && value.status !== 'Kaldırıldı')
+  ) {
+    throw new Error('API geçersiz bir lisans ataması döndürdü.')
+  }
+  return value as unknown as LicenseAssignment
+}
+
+const mapAssignmentList = (value: unknown): LicenseAssignment[] => {
+  if (!Array.isArray(value)) throw new Error('API lisans atama listesini beklenen formatta döndürmedi.')
+  return value.map(mapAssignmentResponse)
 }
 
 const getValidationMessage = (value: unknown): string | undefined => {
@@ -155,6 +196,38 @@ export const licenseService: LicenseService = {
       return mapLicenseResponse(response.data)
     } catch (error: unknown) {
       throw new Error(getApiErrorMessage(error, 'Lisans bilgileri güncellenemedi.'))
+    }
+  },
+
+  getAssignments: async (id) => {
+    try {
+      return mapAssignmentList((await apiClient.get<unknown>(`/api/licenses/${encodeURIComponent(id)}/assignments`)).data)
+    } catch (error: unknown) {
+      throw new Error(getApiErrorMessage(error, 'Lisans atamaları alınamadı.'))
+    }
+  },
+
+  getAssetAssignments: async (assetId) => {
+    try {
+      return mapAssignmentList((await apiClient.get<unknown>(`/api/licenses/assignments/asset/${encodeURIComponent(assetId)}`)).data)
+    } catch (error: unknown) {
+      throw new Error(getApiErrorMessage(error, 'Cihaza atanmış lisanslar alınamadı.'))
+    }
+  },
+
+  createAssignment: async (id, input) => {
+    try {
+      return mapAssignmentResponse((await apiClient.post<unknown>(`/api/licenses/${encodeURIComponent(id)}/assignments`, input)).data)
+    } catch (error: unknown) {
+      throw new Error(getApiErrorMessage(error, 'Lisans atanamadı.'))
+    }
+  },
+
+  revokeAssignment: async (licenseId, assignmentId) => {
+    try {
+      return mapAssignmentResponse((await apiClient.put<unknown>(`/api/licenses/${encodeURIComponent(licenseId)}/assignments/${encodeURIComponent(assignmentId)}/revoke`)).data)
+    } catch (error: unknown) {
+      throw new Error(getApiErrorMessage(error, 'Lisans ataması kaldırılamadı.'))
     }
   },
 }

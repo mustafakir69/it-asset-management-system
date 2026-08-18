@@ -11,7 +11,6 @@ interface LicenseFormValues {
   vendor: string
   licenseType: string
   totalSeats: number
-  usedSeats: number
   startDate?: Dayjs
   expirationDate?: Dayjs
   isActive: 'Aktif' | 'Pasif'
@@ -37,7 +36,7 @@ function LicenseForm({
 
   useEffect(() => {
     form.resetFields()
-    form.setFieldsValue({ totalSeats: 0, usedSeats: 0, isActive: 'Aktif' })
+    form.setFieldsValue({ totalSeats: 0, isActive: 'Aktif' })
 
     if (initialValues) {
       form.setFieldsValue({
@@ -50,18 +49,6 @@ function LicenseForm({
       })
     }
   }, [form, initialValues])
-
-  const validateUsedSeats = (_rule: unknown, usedSeats?: number) => {
-    const totalSeats = form.getFieldValue('totalSeats') as number | undefined
-
-    if (usedSeats !== undefined && totalSeats !== undefined && usedSeats > totalSeats) {
-      return Promise.reject(
-        new Error('Kullanılan lisans hakkı toplam lisans hakkını aşamaz.'),
-      )
-    }
-
-    return Promise.resolve()
-  }
 
   const validateExpirationDate = (_rule: unknown, expirationDate?: Dayjs) => {
     const startDate = form.getFieldValue('startDate') as Dayjs | undefined
@@ -80,7 +67,6 @@ function LicenseForm({
       vendor: values.vendor.trim(),
       licenseType: values.licenseType.trim(),
       totalSeats: values.totalSeats,
-      usedSeats: values.usedSeats,
       startDate: values.startDate?.format('YYYY-MM-DD') ?? '',
       expirationDate: values.expirationDate?.format('YYYY-MM-DD') ?? null,
       isActive: values.isActive === 'Aktif',
@@ -140,20 +126,6 @@ function LicenseForm({
             rules={[
               { required: true, message: 'Toplam lisans hakkını girin.' },
               { type: 'number', min: 0, message: 'Toplam lisans hakkı negatif olamaz.' },
-            ]}
-          >
-            <InputNumber min={0} precision={0} />
-          </Form.Item>
-        </Col>
-        <Col xs={24} md={12}>
-          <Form.Item
-            dependencies={['totalSeats']}
-            label="Kullanılan Lisans Hakkı"
-            name="usedSeats"
-            rules={[
-              { required: true, message: 'Kullanılan lisans hakkını girin.' },
-              { type: 'number', min: 0, message: 'Kullanılan lisans hakkı negatif olamaz.' },
-              { validator: validateUsedSeats },
             ]}
           >
             <InputNumber min={0} precision={0} />

@@ -167,15 +167,28 @@ public sealed class AssetsController(
         }
 
         var statusChanged = !asset.Status.Equals(requestedStatus, StringComparison.OrdinalIgnoreCase);
+        var hasActiveAssignment = await dbContext.Assignments.AnyAsync(
+            assignment => assignment.AssetId == id && assignment.ReturnedAt == null,
+            cancellationToken);
+
+        if (statusChanged && hasActiveAssignment && AssetLifecycleRules.IsCritical(requestedStatus))
+        {
+            return AssignmentStatusConflict(
+                "Aktif zimmeti bulunan cihaz bu duruma geçirilemez. Önce zimmet iadesini tamamlayın.");
+        }
+
         if (statusChanged && AssetLifecycleRules.IsCritical(requestedStatus))
         {
             return AssignmentStatusConflict(
                 "Kayıp, Hurda ve Elden Çıkarıldı durumları yalnız ilgili durum işlemi üzerinden kaydedilebilir.");
         }
 
-        var hasActiveAssignment = await dbContext.Assignments.AnyAsync(
-            assignment => assignment.AssetId == id && assignment.ReturnedAt == null,
-            cancellationToken);
+        if (statusChanged && AssetLifecycleRules.IsCritical(asset.Status))
+        {
+            return AssignmentStatusConflict(
+                "Kritik durumdaki cihazın durumu genel düzenleme ekranından değiştirilemez.");
+        }
+
         var requestedStatusIsAssigned = requestedStatus.Equals(
             AssetLifecycleRules.Assigned,
             StringComparison.OrdinalIgnoreCase);
@@ -213,22 +226,23 @@ public sealed class AssetsController(
         asset.PurchaseDate = request.PurchaseDate!.Value;
         asset.WarrantyEndDate = request.WarrantyEndDate!.Value;
 
-        var movementType = statusChanged
-            ? requestedStatus.Equals(AssetLifecycleRules.InMaintenance, StringComparison.OrdinalIgnoreCase)
+        if (statusChanged)
+        {
+            var movementType = requestedStatus.Equals(AssetLifecycleRules.InMaintenance, StringComparison.OrdinalIgnoreCase)
                 ? AssetMovementType.MaintenanceStarted
                 : previousStatus.Equals(AssetLifecycleRules.InMaintenance, StringComparison.OrdinalIgnoreCase) &&
                   requestedStatus.Equals(AssetLifecycleRules.Available, StringComparison.OrdinalIgnoreCase)
                     ? AssetMovementType.MaintenanceCompleted
-                    : AssetMovementType.StatusChanged
-            : AssetMovementType.InformationUpdated;
-        dbContext.AssetMovements.Add(AssetMovementFactory.Create(
-            asset.Id,
-            movementType,
-            DateTimeOffset.UtcNow,
-            previousStatus,
-            requestedStatus,
-            currentUserId,
-            statusChanged ? $"Cihaz durumu {previousStatus} durumundan {requestedStatus} durumuna geçirildi." : "Cihaz bilgileri güncellendi."));
+                    : AssetMovementType.StatusChanged;
+            dbContext.AssetMovements.Add(AssetMovementFactory.Create(
+                asset.Id,
+                movementType,
+                DateTimeOffset.UtcNow,
+                previousStatus,
+                requestedStatus,
+                currentUserId,
+                $"Cihaz durumu {previousStatus} durumundan {requestedStatus} durumuna geçirildi."));
+        }
 
         try
         {

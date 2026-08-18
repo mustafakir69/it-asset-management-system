@@ -25,14 +25,14 @@ const summaryPresentations: Record<DashboardSummaryKey, SummaryPresentation> = {
 const summaryKeys = Object.keys(summaryPresentations) as DashboardSummaryKey[]
 const summaryRoutes: Record<DashboardSummaryKey, string> = {
   totalAssets: '/assets',
-  inStockAssets: '/assets',
+  inStockAssets: '/assets?status=Boşta',
   assignedAssets: '/assignments',
-  maintenanceAssets: '/assets',
+  maintenanceAssets: '/assets?status=Bakımda',
   expiringWarranties: '/warranties/expiring',
   expiringLicenses: '/licenses/expiring',
   criticalStockItems: '/stock/critical',
   overdueMaintenanceTasks: '/maintenance?view=overdue',
-  openMaintenanceRequests: '/support-requests',
+  openMaintenanceRequests: '/support-requests?view=open',
 }
 const dateTimeOptions: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }
 

@@ -22,6 +22,18 @@ public static class CsvExporter
         ["Cihaz Kodu", "Cihaz", "Bakım / Talep", "Kayıt Türü", "Planlanan Tarih", "Gerçekleşen Tarih", "Yapan Kişi", "Sonuç", "Durum"],
         records.Select(item => new[] { item.AssetCode, item.AssetName, item.Title, item.RecordType, item.PlannedDate.HasValue ? Date(item.PlannedDate.Value) : "", item.CompletedAt.HasValue ? DateTime(item.CompletedAt.Value) : "", item.ActorName ?? "", item.Result ?? "", item.Status }));
 
+    public static byte[] Warranties(IEnumerable<WarrantyReportDto> records) => Create(
+        ["Cihaz Kodu", "Cihaz", "Kategori", "Garanti Bitişi", "Garanti Durumu", "Kullanım Durumu", "Zimmetli Çalışan", "Birim"],
+        records.Select(item => new[] { item.AssetCode, item.AssetName, item.Category, item.WarrantyEndDate.HasValue ? Date(item.WarrantyEndDate.Value) : "", item.WarrantyStatus, item.AssetStatus, item.CurrentAssigneeName ?? "", item.CurrentAssigneeDepartment ?? "" }));
+
+    public static byte[] Licenses(IEnumerable<LicenseReportDto> records) => Create(
+        ["Lisans Kodu", "Ürün", "Sağlayıcı", "Lisans Türü", "Toplam Hak", "Kullanılan", "Kalan", "Bitiş Tarihi", "Durum"],
+        records.Select(item => new[] { item.LicenseCode, item.ProductName, item.Vendor, item.LicenseType, item.TotalSeats.ToString(CultureInfo.InvariantCulture), item.UsedSeats.ToString(CultureInfo.InvariantCulture), item.AvailableSeats.ToString(CultureInfo.InvariantCulture), item.ExpirationDate.HasValue ? Date(item.ExpirationDate.Value) : "", item.Status }));
+
+    public static byte[] SupportRequests(IEnumerable<SupportReportDto> records) => Create(
+        ["Talep No", "Cihaz Kodu", "Cihaz", "Talebi Açan", "Birim", "Öncelik", "Durum", "Atanan IT", "Oluşturulma", "Tamamlanma", "Tamamlayan", "Çözüm"],
+        records.Select(item => new[] { item.RequestNumber, item.AssetCode, item.AssetName, item.RequestedByName, item.Department, item.Priority, item.Status, item.AssignedToName ?? "", DateTime(item.CreatedAt), item.CompletedAt.HasValue ? DateTime(item.CompletedAt.Value) : "", item.CompletedByName ?? "", item.Result ?? "" }));
+
     private static byte[] Create(IEnumerable<string> headers, IEnumerable<string[]> rows)
     {
         var builder = new StringBuilder();

@@ -11,16 +11,20 @@ import {
   Modal,
   Select,
   Space,
+  Table,
+  Tag,
   Timeline,
   Typography,
 } from 'antd'
-import type { DescriptionsProps, MenuProps } from 'antd'
+import type { DescriptionsProps, MenuProps, TableColumnsType } from 'antd'
 import dayjs from 'dayjs'
 import type { Dayjs } from 'dayjs'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ContentCard, ErrorState, LoadingState, PageHeader, StatusTag } from '../../components'
 import { assetService } from '../../services/assetService'
+import { licenseService } from '../../services/licenseService'
+import { maintenanceService } from '../../services/maintenanceService'
 import {
   assetDisposalMethods,
   assetScrapReasons,
@@ -29,6 +33,8 @@ import {
   type AssetMovement,
   type AssetScrapReason,
 } from '../../types/asset'
+import type { LicenseAssignment } from '../../types/license'
+import type { MaintenanceTask, MaintenanceTaskStatus } from '../../types/maintenance'
 import { formatDate } from '../../utils'
 
 type LifecycleAction = 'lost' | 'scrap' | 'dispose'
@@ -61,6 +67,8 @@ function AssetDetailPage() {
   const [form] = Form.useForm<LifecycleFormValues>()
   const [asset, setAsset] = useState<Asset | null>(null)
   const [movements, setMovements] = useState<AssetMovement[]>([])
+  const [assignedLicenses, setAssignedLicenses] = useState<LicenseAssignment[]>([])
+  const [maintenanceTasks, setMaintenanceTasks] = useState<MaintenanceTask[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [movementError, setMovementError] = useState<string | null>(null)
@@ -87,10 +95,17 @@ function AssetDetailPage() {
       setAsset(assetData)
 
       try {
-        setMovements(await assetService.getAssetMovements(id))
+        const [movementData, licenseData, maintenanceData] = await Promise.all([
+          assetService.getAssetMovements(id),
+          licenseService.getAssetAssignments(id),
+          maintenanceService.getTasksByAsset(id),
+        ])
+        setMovements(movementData)
+        setAssignedLicenses(licenseData)
+        setMaintenanceTasks(maintenanceData)
       } catch (error: unknown) {
         setMovementError(
-          error instanceof Error ? error.message : 'Cihaz hareket geçmişi yüklenemedi.',
+          error instanceof Error ? error.message : 'Cihaz ilişkili geçmiş bilgileri yüklenemedi.',
         )
       }
     } catch (error: unknown) {
@@ -217,14 +232,63 @@ function AssetDetailPage() {
         {movement.reason && <Typography.Text>Hurda nedeni: {movement.reason}</Typography.Text>}
         {movement.method && <Typography.Text>Yöntem: {movement.method}</Typography.Text>}
         {movement.description && <Typography.Paragraph>{movement.description}</Typography.Paragraph>}
-        {movement.relatedEntityType && movement.relatedEntityId && (
+        {movement.relatedEntityType && (
           <Typography.Text type="secondary">
-            İlişkili kayıt: {movement.relatedEntityType === 'Assignment' ? 'Zimmet' : 'Bakım görevi'} · {movement.relatedEntityId}
+            İlişkili kayıt: {movement.relatedEntityType === 'Assignment' ? 'Zimmet' : 'Bakım görevi'}
           </Typography.Text>
         )}
       </Space>
     ),
   }))
+
+  const maintenanceColumns: TableColumnsType<MaintenanceTask> = [
+    { title: 'Bakım', dataIndex: 'title' },
+    { title: 'Planlanan Tarih', dataIndex: 'plannedDate', render: (value: string) => formatDate(value) },
+    { title: 'Durum', dataIndex: 'displayStatus', render: (value: MaintenanceTaskStatus) => <StatusTag status={value} /> },
+    { title: 'Sorumlu IT', dataIndex: 'responsibleUserName' },
+    { title: 'Tamamlayan', dataIndex: 'completedByName', responsive: ['md'], render: (value: string | null) => value ?? '—' },
+    { title: 'Tamamlanma Tarihi', dataIndex: 'completedDate', responsive: ['lg'], render: (value: string | null) => formatDate(value) },
+    { title: 'Sonuç / Çalışma Notu', render: (_value, item) => item.result || item.workNotes || item.cancellationReason || '—', ellipsis: true },
+  ]
+
+  const licenseColumns: TableColumnsType<LicenseAssignment> = [
+    {
+      title: 'Lisans Kodu',
+      dataIndex: 'licenseCode',
+      render: (value: string, item) => (
+        <Button type="link" onClick={() => void navigate(`/licenses/${item.licenseId}`)}>
+          {value}
+        </Button>
+      ),
+    },
+    {
+      title: 'Ürün',
+      dataIndex: 'productName',
+      render: (value: string, item) => (
+        <Button type="link" onClick={() => void navigate(`/licenses/${item.licenseId}`)}>
+          {value}
+        </Button>
+      ),
+    },
+    { title: 'Lisans Türü', dataIndex: 'licenseType', responsive: ['md'] },
+    {
+      title: 'Kullanıcı',
+      dataIndex: 'employeeName',
+      render: (value: string | null) => value ?? '—',
+    },
+    {
+      title: 'Atama Tarihi',
+      dataIndex: 'assignedAt',
+      render: (value: string) => formatDate(value),
+    },
+    {
+      title: 'Durum',
+      dataIndex: 'status',
+      render: (value: LicenseAssignment['status']) => (
+        <Tag color={value === 'Aktif' ? 'green' : 'default'}>{value}</Tag>
+      ),
+    },
+  ]
 
   return (
     <section>
@@ -264,6 +328,30 @@ function AssetDetailPage() {
             <Descriptions bordered column={{ xs: 1, sm: 1, md: 2 }} items={descriptionItems} size="middle" />
           ) : null}
         </ContentCard>
+
+        {!isLoading && asset && (
+          <ContentCard title="Atanmış Lisanslar">
+            {movementError ? (
+              <ErrorState message={movementError} onRetry={() => void loadAsset()} />
+            ) : (
+              <Table<LicenseAssignment>
+                columns={licenseColumns}
+                dataSource={assignedLicenses}
+                locale={{ emptyText: <Empty description="Bu cihaza atanmış aktif lisans yok." /> }}
+                pagination={false}
+                rowKey="id"
+                scroll={{ x: 850 }}
+                size="small"
+              />
+            )}
+          </ContentCard>
+        )}
+
+        {!isLoading && asset && (
+          <ContentCard title="Bakım Geçmişi">
+            {movementError ? <ErrorState message={movementError} onRetry={() => void loadAsset()} /> : <Table columns={maintenanceColumns} dataSource={maintenanceTasks} locale={{ emptyText: <Empty description="Bu cihaz için bakım kaydı yok." /> }} pagination={false} rowKey="id" scroll={{ x: 1000 }} size="small" />}
+          </ContentCard>
+        )}
 
         {!isLoading && asset && (
           <ContentCard title="Hareket Geçmişi">

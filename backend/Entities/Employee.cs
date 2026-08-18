@@ -13,4 +13,5 @@ public sealed class Employee
     public ICollection<Assignment> Assignments { get; set; } = [];
     public ICollection<StockTransaction> ReceivedStockTransactions { get; set; } = [];
     public ICollection<MaintenanceRequest> SupportRequests { get; set; } = [];
+    public ICollection<LicenseAssignment> LicenseAssignments { get; set; } = [];
 }

@@ -27,6 +27,8 @@ public sealed class ApplicationDbContext(
     public DbSet<StockAlert> StockAlerts => Set<StockAlert>();
     public DbSet<MaintenanceNotification> MaintenanceNotifications => Set<MaintenanceNotification>();
     public DbSet<AssetMovement> AssetMovements => Set<AssetMovement>();
+    public DbSet<LicenseAssignment> LicenseAssignments => Set<LicenseAssignment>();
+    public DbSet<SupportRequestActivity> SupportRequestActivities => Set<SupportRequestActivity>();
 
     private static readonly JsonSerializerOptions AuditJsonOptions = new()
     {
@@ -85,6 +87,7 @@ public sealed class ApplicationDbContext(
         ConfigureStockItems(modelBuilder);
         ConfigureStockTransactions(modelBuilder);
         ConfigureLicenses(modelBuilder);
+        ConfigureLicenseAssignments(modelBuilder);
         ConfigureMaintenance(modelBuilder);
         ConfigureAuditLogs(modelBuilder);
         ConfigureNotifications(modelBuilder);
@@ -251,8 +254,10 @@ public sealed class ApplicationDbContext(
             StockItem => true,
             StockTransaction => entry.State == EntityState.Added,
             License => true,
+            LicenseAssignment => true,
             MaintenanceTask => true,
             MaintenanceRequest => true,
+            SupportRequestActivity => true,
             AppUser => entry.State == EntityState.Added,
             StockAlert => true,
             MaintenanceNotification => true,
@@ -274,6 +279,8 @@ public sealed class ApplicationDbContext(
                 StockTransaction => "Stok Hareketi",
                 AppUser => "Kullanıcı Oluşturma",
                 MaintenanceRequest => "Talep Oluşturma",
+                LicenseAssignment => "Lisans Atama",
+                SupportRequestActivity => "Destek Talebi Aktivitesi",
                 StockAlert => "Kritik Stok Bildirimi",
                 MaintenanceNotification => "Bakım Bildirimi",
                 _ => "Oluşturma"
@@ -508,11 +515,8 @@ public sealed class ApplicationDbContext(
                 "CK_Licenses_TotalSeats_NonNegative",
                 "[TotalSeats] >= 0");
             table.HasCheckConstraint(
-                "CK_Licenses_UsedSeats_NonNegative",
-                "[UsedSeats] >= 0");
-            table.HasCheckConstraint(
-                "CK_Licenses_UsedSeats_NotGreaterThanTotal",
-                "[UsedSeats] <= [TotalSeats]");
+                "CK_Licenses_LegacyUsedSeats_NonNegative",
+                "[LegacyUsedSeats] >= 0");
             table.HasCheckConstraint(
                 "CK_Licenses_ExpirationDate_NotBeforeStartDate",
                 "[ExpirationDate] IS NULL OR [ExpirationDate] >= [StartDate]");
@@ -532,6 +536,59 @@ public sealed class ApplicationDbContext(
             .IsUnique()
             .HasDatabaseName("UX_Licenses_LicenseCode");
 
+    }
+
+    private static void ConfigureLicenseAssignments(ModelBuilder modelBuilder)
+    {
+        var assignment = modelBuilder.Entity<LicenseAssignment>();
+        assignment.ToTable("LicenseAssignments", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_LicenseAssignments_TargetRequired",
+                "[EmployeeId] IS NOT NULL OR [AssetId] IS NOT NULL");
+            table.HasCheckConstraint(
+                "CK_LicenseAssignments_RevocationComplete",
+                "([RevokedAt] IS NULL AND [RevokedByUserId] IS NULL) OR ([RevokedAt] IS NOT NULL AND [RevokedByUserId] IS NOT NULL)");
+        });
+        assignment.HasKey(item => item.Id);
+        assignment.Property(item => item.Id).HasMaxLength(64);
+        assignment.Property(item => item.LicenseId).HasMaxLength(64).IsRequired();
+        assignment.Property(item => item.EmployeeId).HasMaxLength(64);
+        assignment.Property(item => item.AssetId).HasMaxLength(64);
+        assignment.Property(item => item.AssignedByUserId).HasMaxLength(64).IsRequired();
+        assignment.Property(item => item.RevokedByUserId).HasMaxLength(64);
+        assignment.Property(item => item.AssignedAt).HasColumnType("datetimeoffset");
+        assignment.Property(item => item.RevokedAt).HasColumnType("datetimeoffset");
+        assignment.HasIndex(item => new { item.LicenseId, item.EmployeeId, item.AssetId })
+            .IsUnique()
+            .HasFilter("[RevokedAt] IS NULL")
+            .HasDatabaseName("UX_LicenseAssignments_ActiveTarget");
+        assignment.HasIndex(item => item.AssetId)
+            .HasDatabaseName("IX_LicenseAssignments_AssetId");
+        assignment.HasIndex(item => item.AssignedByUserId)
+            .HasDatabaseName("IX_LicenseAssignments_AssignedByUserId");
+        assignment.HasIndex(item => item.RevokedByUserId)
+            .HasDatabaseName("IX_LicenseAssignments_RevokedByUserId");
+        assignment.HasOne(item => item.License)
+            .WithMany(license => license.Assignments)
+            .HasForeignKey(item => item.LicenseId)
+            .OnDelete(DeleteBehavior.Restrict);
+        assignment.HasOne(item => item.Employee)
+            .WithMany(employee => employee.LicenseAssignments)
+            .HasForeignKey(item => item.EmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+        assignment.HasOne(item => item.Asset)
+            .WithMany(asset => asset.LicenseAssignments)
+            .HasForeignKey(item => item.AssetId)
+            .OnDelete(DeleteBehavior.Restrict);
+        assignment.HasOne(item => item.AssignedByUser)
+            .WithMany(user => user.LicenseAssignmentsCreated)
+            .HasForeignKey(item => item.AssignedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+        assignment.HasOne(item => item.RevokedByUser)
+            .WithMany(user => user.LicenseAssignmentsRevoked)
+            .HasForeignKey(item => item.RevokedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureMaintenance(ModelBuilder modelBuilder)
@@ -640,6 +697,30 @@ public sealed class ApplicationDbContext(
         request.HasOne(item => item.CompletedByUser)
             .WithMany(user => user.CompletedSupportRequests)
             .HasForeignKey(item => item.CompletedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        var activity = modelBuilder.Entity<SupportRequestActivity>();
+        activity.ToTable("SupportRequestActivities");
+        activity.HasKey(item => item.Id);
+        activity.Property(item => item.Id).HasMaxLength(64);
+        activity.Property(item => item.MaintenanceRequestId).HasMaxLength(64).IsRequired();
+        activity.Property(item => item.ActivityType).HasConversion<string>().HasMaxLength(40).IsRequired();
+        activity.Property(item => item.OccurredAt).HasColumnType("datetimeoffset");
+        activity.Property(item => item.PerformedByUserId).HasMaxLength(64).IsRequired();
+        activity.Property(item => item.OldValue).HasMaxLength(500);
+        activity.Property(item => item.NewValue).HasMaxLength(500);
+        activity.Property(item => item.Description).HasMaxLength(2000);
+        activity.HasIndex(item => new { item.MaintenanceRequestId, item.OccurredAt })
+            .HasDatabaseName("IX_SupportRequestActivities_RequestId_OccurredAt");
+        activity.HasIndex(item => item.PerformedByUserId)
+            .HasDatabaseName("IX_SupportRequestActivities_PerformedByUserId");
+        activity.HasOne(item => item.MaintenanceRequest)
+            .WithMany(request => request.Activities)
+            .HasForeignKey(item => item.MaintenanceRequestId)
+            .OnDelete(DeleteBehavior.Restrict);
+        activity.HasOne(item => item.PerformedByUser)
+            .WithMany(user => user.SupportRequestActivities)
+            .HasForeignKey(item => item.PerformedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

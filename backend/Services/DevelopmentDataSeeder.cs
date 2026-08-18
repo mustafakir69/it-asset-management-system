@@ -274,6 +274,156 @@ public sealed class DevelopmentDataSeeder(
                 Result = status == MaintenanceRequestStatus.Completed ? "Sorun giderildi ve kullanıcıyla doğrulandı." : null,
                 WorkNotes = status == MaintenanceRequestStatus.Completed ? "Kontroller ve gerekli yapılandırma tamamlandı." : null });
         }
+        await db.SaveChangesAsync(ct);
+
+        var demoLicense = await db.Licenses
+            .Where(item => item.IsActive &&
+                (item.ExpirationDate == null || item.ExpirationDate >= DateOnly.FromDateTime(DateTime.Today)))
+            .OrderBy(item => item.LicenseCode)
+            .FirstOrDefaultAsync(ct);
+        if (demoLicense is not null)
+        {
+            var licenseTargets = new (string Id, string? EmployeeId, string? AssetId)[]
+            {
+                ("license-assignment-dev-001", activeEmployees[0].Id, null),
+                ("license-assignment-dev-002", null, "asset-dev-039"),
+                ("license-assignment-dev-003", activeEmployees[1].Id, "asset-dev-040")
+            };
+            foreach (var target in licenseTargets.Take(demoLicense.TotalSeats))
+            {
+                if (await db.LicenseAssignments.AnyAsync(item => item.Id == target.Id, ct)) continue;
+                db.LicenseAssignments.Add(new LicenseAssignment
+                {
+                    Id = target.Id,
+                    LicenseId = demoLicense.Id,
+                    EmployeeId = target.EmployeeId,
+                    AssetId = target.AssetId,
+                    AssignedAt = now.AddDays(-10 + int.Parse(target.Id[^1..])),
+                    AssignedByUserId = itUser.Id
+                });
+            }
+        }
+
+        var deviceLicenseSeeds = new[]
+        {
+            (Id: "license-assignment-device-dev-040", LicenseCode: "LIC-M365-001", AssetId: "asset-dev-040", DayOffset: -6),
+            (Id: "license-assignment-device-dev-039", LicenseCode: "LIC-CAD-007", AssetId: "asset-dev-039", DayOffset: -5),
+            (Id: "license-assignment-device-dev-038", LicenseCode: "LIC-ACROBAT-003", AssetId: "asset-dev-038", DayOffset: -4)
+        };
+        var seededDeviceLicenses = await db.Licenses
+            .Where(item => item.IsActive &&
+                (item.ExpirationDate == null || item.ExpirationDate >= DateOnly.FromDateTime(DateTime.Today)))
+            .ToDictionaryAsync(item => item.LicenseCode, StringComparer.OrdinalIgnoreCase, ct);
+        foreach (var seed in deviceLicenseSeeds)
+        {
+            if (!seededDeviceLicenses.TryGetValue(seed.LicenseCode, out var license) ||
+                !assets.ContainsKey(seed.AssetId))
+                continue;
+
+            var existing = await db.LicenseAssignments.FirstOrDefaultAsync(
+                item => item.Id == seed.Id,
+                ct);
+            var duplicateActiveAssignment = await db.LicenseAssignments.AnyAsync(
+                item => item.Id != seed.Id &&
+                    item.LicenseId == license.Id &&
+                    item.AssetId == seed.AssetId &&
+                    item.EmployeeId == null &&
+                    item.RevokedAt == null,
+                ct);
+            if (duplicateActiveAssignment) continue;
+
+            var activeAssignmentCount = await db.LicenseAssignments.CountAsync(
+                item => item.LicenseId == license.Id &&
+                    item.RevokedAt == null &&
+                    item.Id != seed.Id,
+                ct);
+            if (activeAssignmentCount >= license.TotalSeats) continue;
+
+            if (existing is null)
+            {
+                existing = new LicenseAssignment { Id = seed.Id };
+                db.LicenseAssignments.Add(existing);
+            }
+
+            existing.LicenseId = license.Id;
+            existing.EmployeeId = null;
+            existing.AssetId = seed.AssetId;
+            existing.AssignedAt = now.AddDays(seed.DayOffset);
+            existing.AssignedByUserId = itUser.Id;
+            existing.RevokedAt = null;
+            existing.RevokedByUserId = null;
+        }
+
+        var supportRequests = await db.MaintenanceRequests
+            .Where(item => item.Id.StartsWith("support-dev-"))
+            .OrderBy(item => item.CreatedAt)
+            .ToListAsync(ct);
+        foreach (var request in supportRequests)
+        {
+            if (await db.SupportRequestActivities.AnyAsync(
+                    item => item.MaintenanceRequestId == request.Id,
+                    ct)) continue;
+            var employeeUserId = await db.AppUsers
+                .Where(item => item.EmployeeId == request.RequestedByEmployeeId)
+                .Select(item => item.Id)
+                .FirstAsync(ct);
+            db.SupportRequestActivities.Add(new SupportRequestActivity
+            {
+                Id = $"support-activity-{request.Id}-created",
+                MaintenanceRequestId = request.Id,
+                ActivityType = SupportRequestActivityType.Created,
+                OccurredAt = request.CreatedAt,
+                PerformedByUserId = employeeUserId,
+                NewValue = "Açık",
+                Description = "Development teknik destek talebi oluşturuldu."
+            });
+            if (request.Status == MaintenanceRequestStatus.Open) continue;
+            db.SupportRequestActivities.Add(new SupportRequestActivity
+            {
+                Id = $"support-activity-{request.Id}-assigned",
+                MaintenanceRequestId = request.Id,
+                ActivityType = SupportRequestActivityType.Assigned,
+                OccurredAt = request.CreatedAt.AddHours(1),
+                PerformedByUserId = itUser.Id,
+                NewValue = itUser.Employee?.FullName ?? itUser.Username,
+                Description = "Talep Development IT personeline atandı."
+            });
+            if (request.Status == MaintenanceRequestStatus.Assigned) continue;
+            db.SupportRequestActivities.Add(new SupportRequestActivity
+            {
+                Id = $"support-activity-{request.Id}-started",
+                MaintenanceRequestId = request.Id,
+                ActivityType = SupportRequestActivityType.Started,
+                OccurredAt = request.CreatedAt.AddHours(2),
+                PerformedByUserId = itUser.Id,
+                OldValue = "Atandı",
+                NewValue = "İşlemde",
+                Description = "Talep işleme alındı."
+            });
+            if (request.Status != MaintenanceRequestStatus.Completed) continue;
+            db.SupportRequestActivities.AddRange(
+                new SupportRequestActivity
+                {
+                    Id = $"support-activity-{request.Id}-solution",
+                    MaintenanceRequestId = request.Id,
+                    ActivityType = SupportRequestActivityType.SolutionAdded,
+                    OccurredAt = request.CompletedAt!.Value,
+                    PerformedByUserId = itUser.Id,
+                    Description = $"Çözüm: {request.Result}"
+                },
+                new SupportRequestActivity
+                {
+                    Id = $"support-activity-{request.Id}-completed",
+                    MaintenanceRequestId = request.Id,
+                    ActivityType = SupportRequestActivityType.Completed,
+                    OccurredAt = request.CompletedAt.Value,
+                    PerformedByUserId = itUser.Id,
+                    OldValue = "İşlemde",
+                    NewValue = "Tamamlandı",
+                    Description = $"Talep tamamlandı. Çalışma notu: {request.WorkNotes}"
+                });
+        }
+
         await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
     }
 }

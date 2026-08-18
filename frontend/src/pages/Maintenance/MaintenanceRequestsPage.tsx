@@ -1,10 +1,11 @@
 import { ClearOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
-import { Button, Col, Input, Row, Select, Space, Table, Tabs, Typography } from 'antd'
+import { Button, Col, Input, Row, Select, Space, Table, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ContentCard,
+  ActionStatisticCard,
   EmptyState,
   ErrorState,
   LoadingState,
@@ -64,6 +65,7 @@ function MaintenanceRequestsPage() {
   const [search, setSearch] = useState('')
   const [priority, setPriority] = useState<MaintenanceRequestPriority>()
   const requestedView = searchParams.get('view')
+  const selectedEmployeeId = searchParams.get('employeeId')
   const supportView: SupportView = isSupportView(requestedView)
     ? requestedView
     : 'all'
@@ -89,17 +91,24 @@ function MaintenanceRequestsPage() {
     void load()
   }, [load])
 
+  const employeeRequests = useMemo(
+    () => selectedEmployeeId
+      ? requests.filter((request) => request.requestedByEmployeeId === selectedEmployeeId)
+      : requests,
+    [requests, selectedEmployeeId],
+  )
+
   const supportCounts = useMemo(() => Object.fromEntries(
     (Object.keys(supportViewStatuses) as SupportView[]).map((view) => [
       view,
-      requests.filter((request) => matchesSupportView(request, view)).length,
+      employeeRequests.filter((request) => matchesSupportView(request, view)).length,
     ]),
-  ) as Record<SupportView, number>, [requests])
+  ) as Record<SupportView, number>, [employeeRequests])
 
   const filtered = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('tr-TR')
 
-    return requests.filter((item) => {
+    return employeeRequests.filter((item) => {
       const matchesSearch = !term || [
         item.assetCode,
         item.assetName,
@@ -112,7 +121,14 @@ function MaintenanceRequestsPage() {
         && matchesSupportView(item, supportView)
         && (!priority || item.priority === priority)
     })
-  }, [priority, requests, search, supportView])
+  }, [employeeRequests, priority, search, supportView])
+
+  const selectView = (view: SupportView) => {
+    const nextParams: Record<string, string> = {}
+    if (view !== 'all') nextParams.view = view
+    if (selectedEmployeeId) nextParams.employeeId = selectedEmployeeId
+    setSearchParams(nextParams)
+  }
 
   const columns: TableColumnsType<MaintenanceRequest> = [
     {
@@ -208,21 +224,21 @@ function MaintenanceRequestsPage() {
       ) : error ? (
         <ContentCard><ErrorState message={error} onRetry={() => void load()} /></ContentCard>
       ) : (
-        <ContentCard>
+        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+          <Row gutter={[16, 16]}>
+            {(Object.keys(supportViewStatuses) as SupportView[]).map((view) => (
+              <Col key={view} flex="1 1 150px">
+                <ActionStatisticCard
+                  active={supportView === view}
+                  onClick={() => selectView(view)}
+                  title={supportViewLabels[view]}
+                  value={supportCounts[view]}
+                />
+              </Col>
+            ))}
+          </Row>
+          <ContentCard>
           <Space className="maintenance-table-content" direction="vertical" size="large">
-            <Tabs
-              activeKey={supportView}
-              items={(Object.keys(supportViewStatuses) as SupportView[]).map((view) => ({
-                key: view,
-                label: `${supportViewLabels[view]} (${supportCounts[view]})`,
-              }))}
-              onChange={(key) => {
-                if (isSupportView(key)) {
-                  setSearchParams(key === 'all' ? {} : { view: key })
-                }
-              }}
-            />
-
             <Row gutter={[12, 12]}>
               <Col xs={24} lg={17}>
                 <Input
@@ -249,7 +265,9 @@ function MaintenanceRequestsPage() {
               </Col>
             </Row>
 
-            <Typography.Text type="secondary">{filtered.length} kayıt bulundu</Typography.Text>
+            <Typography.Text type="secondary">
+              {selectedEmployeeId ? 'Seçili personel için ' : ''}{filtered.length} kayıt bulundu
+            </Typography.Text>
 
             <Table<MaintenanceRequest>
               className="app-data-table"
@@ -267,7 +285,8 @@ function MaintenanceRequestsPage() {
               tableLayout="fixed"
             />
           </Space>
-        </ContentCard>
+          </ContentCard>
+        </Space>
       )}
     </section>
   )

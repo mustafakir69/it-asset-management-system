@@ -14,7 +14,8 @@ public enum UserOperationStatus
     Success,
     ValidationError,
     Conflict,
-    Forbidden
+    Forbidden,
+    NotFound
 }
 
 public sealed record UserOperationResult(
@@ -26,6 +27,15 @@ public sealed class UserService(
     ApplicationDbContext dbContext,
     IPasswordHasher<AppUser> passwordHasher)
 {
+    public async Task<UserDto?> GetByIdAsync(string id, CancellationToken cancellationToken)
+    {
+        var user = await dbContext.AppUsers
+            .AsNoTracking()
+            .Include(item => item.Employee)
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        return user is null ? null : ToDto(user);
+    }
+
     public async Task<string?> SuggestUsernameAsync(
         string employeeId,
         CancellationToken cancellationToken)
@@ -183,6 +193,108 @@ public sealed class UserService(
         }
     }
 
+    public async Task<UserOperationResult> UpdateAsync(
+        string id,
+        UserUpdateDto request,
+        AppRole callerRole,
+        CancellationToken cancellationToken)
+    {
+        var user = await dbContext.AppUsers
+            .Include(item => item.Employee)
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (user is null) return new(UserOperationStatus.NotFound, ErrorMessage: "Kullanıcı bulunamadı.");
+        if (!CanManage(callerRole, user))
+            return new(UserOperationStatus.Forbidden, ErrorMessage: "Bu kullanıcı hesabını düzenleme yetkiniz yok.");
+
+        if (request.Role.Trim().Equals("Auditor", StringComparison.OrdinalIgnoreCase) ||
+            !Enum.TryParse<AppRole>(request.Role.Trim(), true, out var requestedRole))
+            return new(UserOperationStatus.ValidationError, ErrorMessage: "Geçerli bir kullanıcı rolü seçin.");
+
+        if (callerRole == AppRole.IT && requestedRole != AppRole.Employee)
+            return new(UserOperationStatus.Forbidden, ErrorMessage: "IT kullanıcıları yalnızca Çalışan hesaplarını düzenleyebilir.");
+        if (user.EmployeeId is null && requestedRole != AppRole.Admin)
+            return new(UserOperationStatus.ValidationError, ErrorMessage: "Bootstrap yönetici hesabının rolü değiştirilemez.");
+        if (user.EmployeeId is not null && requestedRole == AppRole.Admin)
+            return new(UserOperationStatus.ValidationError, ErrorMessage: "Personel bağlantılı hesap Yönetici rolüne dönüştürülemez.");
+        if (user.IsActive && requestedRole != AppRole.Admin && user.Employee?.IsActive != true)
+            return new(UserOperationStatus.ValidationError, ErrorMessage: "Aktif olmayan personelin hesabı etkinleştirilemez.");
+
+        var username = UsernameRules.Normalize(request.Username);
+        var email = Clean(request.Email)?.ToLowerInvariant();
+        if (username is null || username.Length < 3)
+            return new(UserOperationStatus.ValidationError, ErrorMessage: "Geçerli bir kullanıcı adı girin.");
+        if (email is null)
+            return new(UserOperationStatus.ValidationError, ErrorMessage: "E-posta adresi zorunludur.");
+
+        if (await dbContext.AppUsers.AnyAsync(
+                item => item.Id != id && item.Username.ToLower() == username.ToLower(),
+                cancellationToken))
+            return new(UserOperationStatus.Conflict, ErrorMessage: "Bu kullanıcı adı zaten kullanılıyor.");
+        if (await dbContext.AppUsers.AnyAsync(
+                item => item.Id != id && item.Email.ToLower() == email.ToLower(),
+                cancellationToken))
+            return new(UserOperationStatus.Conflict, ErrorMessage: "Bu e-posta adresi zaten kullanılıyor.");
+
+        user.Username = username;
+        user.Email = email;
+        user.Role = requestedRole;
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return new(UserOperationStatus.Success, ToDto(user));
+        }
+        catch (DbUpdateException exception) when (IsUniqueViolation(exception))
+        {
+            return new(UserOperationStatus.Conflict, ErrorMessage: GetUniqueViolationMessage(exception));
+        }
+    }
+
+    public async Task<UserOperationResult> SetActiveAsync(
+        string id,
+        bool isActive,
+        AppRole callerRole,
+        string currentUserId,
+        CancellationToken cancellationToken)
+    {
+        var user = await dbContext.AppUsers
+            .Include(item => item.Employee)
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (user is null) return new(UserOperationStatus.NotFound, ErrorMessage: "Kullanıcı bulunamadı.");
+        if (!CanManage(callerRole, user))
+            return new(UserOperationStatus.Forbidden, ErrorMessage: "Bu kullanıcı hesabının durumunu değiştirme yetkiniz yok.");
+        if (!isActive && user.Id == currentUserId)
+            return new(UserOperationStatus.Conflict, ErrorMessage: "Kendi kullanıcı hesabınızı pasife alamazsınız.");
+        if (!isActive && user.Role == AppRole.Admin &&
+            await dbContext.AppUsers.CountAsync(
+                item => item.Role == AppRole.Admin && item.IsActive,
+                cancellationToken) <= 1)
+            return new(UserOperationStatus.Conflict, ErrorMessage: "Sistemdeki son aktif yönetici hesabı pasife alınamaz.");
+        if (isActive && user.Role != AppRole.Admin && user.Employee?.IsActive != true)
+            return new(UserOperationStatus.ValidationError, ErrorMessage: "Aktif olmayan personelin hesabı etkinleştirilemez.");
+
+        user.IsActive = isActive;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return new(UserOperationStatus.Success, ToDto(user));
+    }
+
+    public async Task<UserOperationResult> ResetPasswordAsync(
+        string id,
+        string password,
+        AppRole callerRole,
+        CancellationToken cancellationToken)
+    {
+        var user = await dbContext.AppUsers
+            .Include(item => item.Employee)
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (user is null) return new(UserOperationStatus.NotFound, ErrorMessage: "Kullanıcı bulunamadı.");
+        if (!CanManage(callerRole, user))
+            return new(UserOperationStatus.Forbidden, ErrorMessage: "Bu kullanıcı hesabının parolasını sıfırlama yetkiniz yok.");
+
+        user.PasswordHash = passwordHasher.HashPassword(user, password);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return new(UserOperationStatus.Success, ToDto(user));
+    }
+
     private async Task<string> FindAvailableUsernameAsync(
         string baseUsername,
         CancellationToken cancellationToken)
@@ -194,6 +306,10 @@ public sealed class UserService(
         var used = existingUsernames.ToHashSet(StringComparer.OrdinalIgnoreCase);
         return UsernameRules.FirstAvailable(baseUsername, used);
     }
+
+    private static bool CanManage(AppRole callerRole, AppUser target) =>
+        callerRole == AppRole.Admin ||
+        callerRole == AppRole.IT && target.Role == AppRole.Employee;
 
     private static UserDto ToDto(AppUser user) => new(
         user.Id,

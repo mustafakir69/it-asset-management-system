@@ -30,6 +30,9 @@ import NotFoundPage from '../pages/NotFoundPage'
 import AssignmentReportPage from '../pages/Reports/AssignmentReportPage'
 import InventoryReportPage from '../pages/Reports/InventoryReportPage'
 import MaintenanceReportPage from '../pages/Reports/MaintenanceReportPage'
+import WarrantyReportPage from '../pages/Reports/WarrantyReportPage'
+import LicenseReportPage from '../pages/Reports/LicenseReportPage'
+import SupportReportPage from '../pages/Reports/SupportReportPage'
 import ReportsPage from '../pages/Reports/ReportsPage'
 import StockReportPage from '../pages/Reports/StockReportPage'
 import StockItemCreatePage from '../pages/Stock/StockItemCreatePage'
@@ -86,6 +89,9 @@ export const router = createBrowserRouter([
       { path: 'reports/assignments', element: operation(<AssignmentReportPage />) },
       { path: 'reports/stock', element: operation(<StockReportPage />) },
       { path: 'reports/maintenance', element: operation(<MaintenanceReportPage />) },
+      { path: 'reports/warranties', element: operation(<WarrantyReportPage />) },
+      { path: 'reports/licenses', element: operation(<LicenseReportPage />) },
+      { path: 'reports/support-requests', element: operation(<SupportReportPage />) },
       { path: 'admin/users', element: operation(<UsersPage />) },
       { path: 'admin/users/new', element: operation(<UserCreatePage />) },
       { path: 'admin/audit-logs', element: adminOnly(<AuditLogsPage />) },

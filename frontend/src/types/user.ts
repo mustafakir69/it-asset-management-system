@@ -22,6 +22,12 @@ export interface CreateUserInput {
   role: UserRole
 }
 
+export interface UpdateUserInput {
+  username: string
+  email: string
+  role: UserRole
+}
+
 export interface ItStaffMember {
   userId: string
   employeeId: string

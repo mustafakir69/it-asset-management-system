@@ -33,10 +33,48 @@ public sealed class MaintenanceRequestsController(ApplicationDbContext db) : Con
         var value = await query.Select(ToDto()).FirstOrDefaultAsync(ct); return value is null ? NotFound() : Ok(value);
     }
 
+    [HttpGet("{id}/activities")]
+    public async Task<ActionResult<IReadOnlyList<SupportRequestActivityDto>>> GetActivities(
+        string id,
+        CancellationToken ct)
+    {
+        var requestQuery = db.MaintenanceRequests.AsNoTracking().Where(item => item.Id == id);
+        if (User.IsInRole(nameof(AppRole.Employee)))
+        {
+            var employeeId = User.GetEmployeeId();
+            if (employeeId is null) return Forbid();
+            requestQuery = requestQuery.Where(item => item.RequestedByEmployeeId == employeeId);
+        }
+        if (!await requestQuery.AnyAsync(ct)) return NotFound();
+
+        var activities = await db.SupportRequestActivities.AsNoTracking()
+            .Where(item => item.MaintenanceRequestId == id)
+            .Include(item => item.PerformedByUser)
+                .ThenInclude(user => user.Employee)
+            .ToListAsync(ct);
+        return Ok(activities
+            .OrderBy(item => item.OccurredAt)
+            .ThenBy(item => item.ActivityType)
+            .Select(item => new SupportRequestActivityDto(
+                item.Id,
+                item.MaintenanceRequestId,
+                ActivityDisplayName(item.ActivityType),
+                item.OccurredAt,
+                item.PerformedByUserId,
+                item.PerformedByUser.Employee != null
+                    ? item.PerformedByUser.Employee.FullName
+                    : item.PerformedByUser.Username,
+                item.OldValue,
+                item.NewValue,
+                item.Description))
+            .ToList());
+    }
+
     [HttpPost, Authorize(Roles = "Employee")]
     public async Task<ActionResult<MaintenanceRequestDto>> Create(MaintenanceRequestCreateDto input, CancellationToken ct)
     {
         var employeeId = User.GetEmployeeId(); if (employeeId is null) return Forbid();
+        var currentUserId = User.GetUserId(); if (currentUserId is null) return Unauthorized();
         if (!TryPriority(input.Priority, out var priority)) return Bad("Geçersiz destek talebi önceliği.");
         var ownsAsset = await db.Assignments.AnyAsync(x => x.AssetId == input.AssetId && x.EmployeeId == employeeId && x.ReturnedAt == null, ct);
         if (!ownsAsset) return StatusCode(403, new ProblemDetails { Status = 403, Title = "Yetkisiz cihaz", Detail = "Yalnızca size aktif zimmetli cihaz için destek talebi açabilirsiniz." });
@@ -44,32 +82,91 @@ public sealed class MaintenanceRequestsController(ApplicationDbContext db) : Con
         var request = new MaintenanceRequest { Id = Guid.NewGuid().ToString("N"), AssetId = input.AssetId, RequestedByEmployeeId = employeeId,
             Title = input.Title.Trim(), Description = input.Description.Trim(), Priority = priority, Status = MaintenanceRequestStatus.Open,
             CreatedAt = now, UpdatedAt = now };
-        db.MaintenanceRequests.Add(request); await db.SaveChangesAsync(ct);
+        db.MaintenanceRequests.Add(request);
+        db.SupportRequestActivities.Add(Activity(
+            request.Id,
+            SupportRequestActivityType.Created,
+            currentUserId,
+            now,
+            newValue: "Açık",
+            description: "Teknik destek talebi oluşturuldu."));
+        await db.SaveChangesAsync(ct);
         return CreatedAtAction(nameof(GetById), new { id = request.Id }, await Query().Where(x => x.Id == request.Id).Select(ToDto()).FirstAsync(ct));
     }
 
     [HttpPut("{id}/assign"), Authorize(Roles = "Admin,IT")]
     public async Task<ActionResult<MaintenanceRequestDto>> Assign(string id, MaintenanceRequestAssignDto input, CancellationToken ct)
     {
-        var request = await db.MaintenanceRequests.FirstOrDefaultAsync(x => x.Id == id, ct); if (request is null) return NotFound();
+        var currentUserId = User.GetUserId(); if (currentUserId is null) return Unauthorized();
+        var request = await db.MaintenanceRequests.Include(x => x.AssignedToUser).ThenInclude(x => x!.Employee).FirstOrDefaultAsync(x => x.Id == id, ct); if (request is null) return NotFound();
         if (Terminal(request.Status)) return ConflictProblem("Tamamlanmış veya iptal edilmiş talep atanamaz.");
-        var assignee = await db.AppUsers.FirstOrDefaultAsync(x => x.Id == input.AssignedToUserId && x.IsActive && x.Role == AppRole.IT, ct);
+        var assignee = await db.AppUsers.Include(x => x.Employee).FirstOrDefaultAsync(x => x.Id == input.AssignedToUserId && x.IsActive && x.Role == AppRole.IT, ct);
         if (assignee is null) return Bad("Talep yalnızca aktif bir IT kullanıcısına atanabilir.");
-        request.AssignedToUserId = assignee.Id; request.Status = MaintenanceRequestStatus.Assigned; request.UpdatedAt = DateTimeOffset.UtcNow;
+        if (request.AssignedToUserId == assignee.Id && request.Status == MaintenanceRequestStatus.Assigned)
+            return ConflictProblem("Talep zaten seçilen IT personeline atanmış.");
+        var now = DateTimeOffset.UtcNow;
+        var previousAssignee = request.AssignedToUser?.Employee?.FullName ?? request.AssignedToUser?.Username;
+        var nextAssignee = assignee.Employee?.FullName ?? assignee.Username;
+        var activityType = request.AssignedToUserId is null
+            ? SupportRequestActivityType.Assigned
+            : SupportRequestActivityType.AssigneeChanged;
+        request.AssignedToUserId = assignee.Id; request.Status = MaintenanceRequestStatus.Assigned; request.UpdatedAt = now;
+        db.SupportRequestActivities.Add(Activity(
+            request.Id,
+            activityType,
+            currentUserId,
+            now,
+            previousAssignee,
+            nextAssignee,
+            activityType == SupportRequestActivityType.Assigned
+                ? $"Talep {nextAssignee} adlı IT personeline atandı."
+                : $"Atanan IT personeli {previousAssignee} yerine {nextAssignee} olarak değiştirildi."));
         await db.SaveChangesAsync(ct); return Ok(await Dto(id, ct));
     }
 
     [HttpPut("{id}/start"), Authorize(Roles = "Admin,IT")]
     public async Task<ActionResult<MaintenanceRequestDto>> Start(string id, CancellationToken ct)
-    { var request = await db.MaintenanceRequests.FirstOrDefaultAsync(x => x.Id == id, ct); if (request is null) return NotFound(); if (request.Status != MaintenanceRequestStatus.Assigned) return ConflictProblem("Yalnızca atanmış talep işleme alınabilir."); request.Status = MaintenanceRequestStatus.InProgress; request.UpdatedAt = DateTimeOffset.UtcNow; await db.SaveChangesAsync(ct); return Ok(await Dto(id, ct)); }
+    { var currentUserId = User.GetUserId(); if (currentUserId is null) return Unauthorized(); var request = await db.MaintenanceRequests.FirstOrDefaultAsync(x => x.Id == id, ct); if (request is null) return NotFound(); if (request.Status != MaintenanceRequestStatus.Assigned) return ConflictProblem("Yalnızca atanmış talep işleme alınabilir."); var now = DateTimeOffset.UtcNow; request.Status = MaintenanceRequestStatus.InProgress; request.UpdatedAt = now; db.SupportRequestActivities.Add(Activity(request.Id, SupportRequestActivityType.Started, currentUserId, now, "Atandı", "İşlemde", "Teknik destek talebi işleme alındı.")); await db.SaveChangesAsync(ct); return Ok(await Dto(id, ct)); }
 
     [HttpPut("{id}/complete"), Authorize(Roles = "Admin,IT")]
     public async Task<ActionResult<MaintenanceRequestDto>> Complete(string id, MaintenanceRequestCompleteDto input, CancellationToken ct)
-    { var request = await db.MaintenanceRequests.FirstOrDefaultAsync(x => x.Id == id, ct); if (request is null) return NotFound(); if (request.Status != MaintenanceRequestStatus.InProgress) return ConflictProblem("Yalnızca işlemdeki talep tamamlanabilir."); request.Status = MaintenanceRequestStatus.Completed; request.CompletedAt = input.CompletedAt!.Value; request.CompletedByUserId = User.GetUserId(); request.Result = input.Result.Trim(); request.WorkNotes = input.WorkNotes.Trim(); request.UpdatedAt = DateTimeOffset.UtcNow; await db.SaveChangesAsync(ct); return Ok(await Dto(id, ct)); }
+    { var currentUserId = User.GetUserId(); if (currentUserId is null) return Unauthorized(); var request = await db.MaintenanceRequests.FirstOrDefaultAsync(x => x.Id == id, ct); if (request is null) return NotFound(); if (request.Status != MaintenanceRequestStatus.InProgress) return ConflictProblem("Yalnızca işlemdeki talep tamamlanabilir."); request.Status = MaintenanceRequestStatus.Completed; request.CompletedAt = input.CompletedAt!.Value; request.CompletedByUserId = currentUserId; request.Result = input.Result.Trim(); request.WorkNotes = input.WorkNotes.Trim(); request.UpdatedAt = DateTimeOffset.UtcNow; db.SupportRequestActivities.Add(Activity(request.Id, SupportRequestActivityType.SolutionAdded, currentUserId, request.UpdatedAt, description: $"Çözüm: {request.Result}")); db.SupportRequestActivities.Add(Activity(request.Id, SupportRequestActivityType.Completed, currentUserId, request.UpdatedAt, "İşlemde", "Tamamlandı", $"Talep tamamlandı. Çalışma notu: {request.WorkNotes}")); await db.SaveChangesAsync(ct); return Ok(await Dto(id, ct)); }
 
     [HttpPut("{id}/cancel"), Authorize(Roles = "Admin,IT")]
     public async Task<ActionResult<MaintenanceRequestDto>> Cancel(string id, MaintenanceRequestCancelDto input, CancellationToken ct)
-    { var request = await db.MaintenanceRequests.FirstOrDefaultAsync(x => x.Id == id, ct); if (request is null) return NotFound(); if (Terminal(request.Status)) return ConflictProblem("Talep zaten kapalı."); request.Status = MaintenanceRequestStatus.Cancelled; request.CancellationReason = input.CancellationReason.Trim(); request.UpdatedAt = DateTimeOffset.UtcNow; await db.SaveChangesAsync(ct); return Ok(await Dto(id, ct)); }
+    { var currentUserId = User.GetUserId(); if (currentUserId is null) return Unauthorized(); var request = await db.MaintenanceRequests.FirstOrDefaultAsync(x => x.Id == id, ct); if (request is null) return NotFound(); if (Terminal(request.Status)) return ConflictProblem("Talep zaten kapalı."); var previousStatus = Status(request.Status); request.Status = MaintenanceRequestStatus.Cancelled; request.CancellationReason = input.CancellationReason.Trim(); request.UpdatedAt = DateTimeOffset.UtcNow; db.SupportRequestActivities.Add(Activity(request.Id, SupportRequestActivityType.Cancelled, currentUserId, request.UpdatedAt, previousStatus, "İptal Edildi", $"İptal nedeni: {request.CancellationReason}")); await db.SaveChangesAsync(ct); return Ok(await Dto(id, ct)); }
+
+    private static SupportRequestActivity Activity(
+        string requestId,
+        SupportRequestActivityType activityType,
+        string userId,
+        DateTimeOffset occurredAt,
+        string? oldValue = null,
+        string? newValue = null,
+        string? description = null) => new()
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            MaintenanceRequestId = requestId,
+            ActivityType = activityType,
+            OccurredAt = occurredAt,
+            PerformedByUserId = userId,
+            OldValue = oldValue,
+            NewValue = newValue,
+            Description = description
+        };
+
+    private static string ActivityDisplayName(SupportRequestActivityType type) => type switch
+    {
+        SupportRequestActivityType.Created => "Talep Oluşturuldu",
+        SupportRequestActivityType.Assigned => "IT Personeline Atandı",
+        SupportRequestActivityType.AssigneeChanged => "Atanan IT Değiştirildi",
+        SupportRequestActivityType.Started => "İşleme Alındı",
+        SupportRequestActivityType.StatusChanged => "Durum Değiştirildi",
+        SupportRequestActivityType.SolutionAdded => "Çözüm Eklendi",
+        SupportRequestActivityType.Completed => "Tamamlandı",
+        SupportRequestActivityType.Cancelled => "İptal Edildi",
+        _ => type.ToString()
+    };
 
     private IQueryable<MaintenanceRequest> Query() => db.MaintenanceRequests.AsNoTracking();
     private Task<MaintenanceRequestDto> Dto(string id, CancellationToken ct) => Query().Where(x => x.Id == id).Select(ToDto()).FirstAsync(ct);

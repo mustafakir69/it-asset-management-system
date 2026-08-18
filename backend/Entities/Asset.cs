@@ -17,4 +17,5 @@ public sealed class Asset
     public ICollection<MaintenanceTask> MaintenanceTasks { get; set; } = [];
     public ICollection<MaintenanceRequest> MaintenanceRequests { get; set; } = [];
     public ICollection<AssetMovement> Movements { get; set; } = [];
+    public ICollection<LicenseAssignment> LicenseAssignments { get; set; } = [];
 }

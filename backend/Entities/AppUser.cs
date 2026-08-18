@@ -20,4 +20,7 @@ public sealed class AppUser
     public ICollection<MaintenanceRequest> AssignedSupportRequests { get; set; } = [];
     public ICollection<MaintenanceRequest> CompletedSupportRequests { get; set; } = [];
     public ICollection<AssetMovement> AssetMovements { get; set; } = [];
+    public ICollection<LicenseAssignment> LicenseAssignmentsCreated { get; set; } = [];
+    public ICollection<LicenseAssignment> LicenseAssignmentsRevoked { get; set; } = [];
+    public ICollection<SupportRequestActivity> SupportRequestActivities { get; set; } = [];
 }

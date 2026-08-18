@@ -58,9 +58,11 @@ builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<StockService>();
 builder.Services.AddScoped<AssignmentService>();
 builder.Services.AddScoped<AssetLifecycleService>();
+builder.Services.AddScoped<LicenseAssignmentService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<ReportsService>();
+builder.Services.AddScoped<GlobalSearchService>();
 builder.Services.AddScoped<AuditLogService>();
 builder.Services.AddScoped<DevelopmentDataSeeder>();
 builder.Services

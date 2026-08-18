@@ -2,7 +2,7 @@ import { ClearOutlined, EyeOutlined, MoreOutlined, SearchOutlined } from '@ant-d
 import { Button, Col, Dropdown, Flex, Input, Row, Select, Space, Table, Tooltip, Typography } from 'antd'
 import type { MenuProps, TableColumnsType, TablePaginationConfig } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ContentCard,
   EmptyState,
@@ -41,6 +41,8 @@ const getAssignmentStatus = (assignment: Assignment): AssignmentStatus =>
 
 function AssignmentHistoryPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedEmployeeId = searchParams.get('employeeId')
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -90,11 +92,12 @@ function AssignmentHistoryPage() {
 
       return (
         matchesSearch &&
+        (!selectedEmployeeId || assignment.employeeId === selectedEmployeeId) &&
         (!filters.department || assignment.department === filters.department) &&
         (!filters.status || getAssignmentStatus(assignment) === filters.status)
       )
     })
-  }, [assignments, filters])
+  }, [assignments, filters, selectedEmployeeId])
 
   const updateFilters = (nextFilters: Partial<HistoryFilters>) => {
     setFilters((current) => ({ ...current, ...nextFilters }))
@@ -103,6 +106,7 @@ function AssignmentHistoryPage() {
 
   const clearFilters = () => {
     setFilters(initialFilters)
+    setSearchParams({})
     setPagination((current) => ({ ...current, current: 1 }))
   }
 
@@ -260,7 +264,7 @@ function AssignmentHistoryPage() {
             </Row>
 
             <Typography.Text type="secondary">
-              {filteredAssignments.length} zimmet kaydı bulundu
+              {selectedEmployeeId ? 'Seçili personel için ' : ''}{filteredAssignments.length} zimmet kaydı bulundu
             </Typography.Text>
 
             <Table<Assignment>

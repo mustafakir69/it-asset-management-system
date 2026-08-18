@@ -23,6 +23,7 @@ import type { MenuProps } from 'antd'
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/useAuth'
+import { GlobalSearch } from '../components'
 import type { UserRole } from '../types/auth'
 import './MainLayout.css'
 
@@ -181,6 +182,7 @@ function MainLayout() {
           <Typography.Text className="header-title" strong>
             Donanım ve Lisans Takip Sistemi
           </Typography.Text>
+          <GlobalSearch />
           {user && (
             <div className="header-user">
               <div className="header-user-details">

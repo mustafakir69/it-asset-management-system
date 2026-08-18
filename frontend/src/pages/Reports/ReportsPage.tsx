@@ -1,4 +1,4 @@
-import { ApartmentOutlined, DatabaseOutlined, LaptopOutlined, ToolOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, CustomerServiceOutlined, DatabaseOutlined, FileProtectOutlined, LaptopOutlined, SafetyCertificateOutlined, ToolOutlined } from '@ant-design/icons'
 import { Button, Col, Row, Typography } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { ContentCard, PageHeader } from '../../components'
@@ -9,6 +9,9 @@ const reports = [
   { path: '/reports/assignments', title: 'Zimmet Raporu', description: 'Aktif ve iade edilmiş zimmet kayıtlarını raporlayın.', icon: <ApartmentOutlined /> },
   { path: '/reports/stock', title: 'Stok Raporu', description: 'Stok seviyelerini ve kritik ürünleri görüntüleyin.', icon: <DatabaseOutlined /> },
   { path: '/reports/maintenance', title: 'Bakım Raporu', description: 'Bakım görev ve taleplerini metrikleriyle değerlendirin.', icon: <ToolOutlined /> },
+  { path: '/reports/warranties', title: 'Garanti Raporu', description: 'Garanti ve cihaz kullanım durumlarını birlikte inceleyin.', icon: <SafetyCertificateOutlined /> },
+  { path: '/reports/licenses', title: 'Lisans Raporu', description: 'Lisans haklarını ve gerçek atama kullanımını raporlayın.', icon: <FileProtectOutlined /> },
+  { path: '/reports/support-requests', title: 'Teknik Destek Raporu', description: 'Destek taleplerini durum, öncelik ve aktörleriyle değerlendirin.', icon: <CustomerServiceOutlined /> },
 ]
 
 function ReportsPage() {

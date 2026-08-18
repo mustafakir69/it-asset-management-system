@@ -1,5 +1,7 @@
 import {
   ClearOutlined,
+  CalendarOutlined,
+  CheckCircleOutlined,
   EyeOutlined,
   PlusOutlined,
   RollbackOutlined,
@@ -9,7 +11,7 @@ import { App as AntdApp, Button, Col, Flex, Input, Row, Select, Space, Table, Ty
 import type { TableColumnsType, TablePaginationConfig } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ContentCard, EmptyState, ErrorState, LoadingState, PageHeader } from '../../components'
+import { ActionStatisticCard, ContentCard, EmptyState, ErrorState, LoadingState, PageHeader } from '../../components'
 import { useAuth } from '../../contexts/useAuth'
 import { assignmentService } from '../../services/assignmentService'
 import type { Assignment, ReturnAssignmentInput } from '../../types/assignment'
@@ -37,6 +39,7 @@ function AssignmentsPage() {
   const { role } = useAuth()
   const canManageAssignments = role === 'Admin' || role === 'IT'
   const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [assignmentHistory, setAssignmentHistory] = useState<Assignment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [filters, setFilters] = useState<AssignmentFilters>(initialFilters)
@@ -49,8 +52,12 @@ function AssignmentsPage() {
     setLoadError(null)
 
     try {
-      const activeAssignments = await assignmentService.getAssignments()
+      const [activeAssignments, history] = await Promise.all([
+        assignmentService.getAssignments(),
+        assignmentService.getAssignmentHistory(),
+      ])
       setAssignments(activeAssignments)
+      setAssignmentHistory(history)
     } catch (error: unknown) {
       setLoadError(
         error instanceof Error ? error.message : 'Aktif zimmetler yüklenirken bir hata oluştu.',
@@ -59,6 +66,19 @@ function AssignmentsPage() {
       setIsLoading(false)
     }
   }, [])
+
+  const summaries = useMemo(() => {
+    const now = new Date()
+    const isCurrentMonth = (value: string) => {
+      const date = new Date(value)
+      return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
+    }
+    return {
+      active: assignments.length,
+      assignedThisMonth: assignmentHistory.filter((item) => isCurrentMonth(item.assignedAt)).length,
+      returnedThisMonth: assignmentHistory.filter((item) => item.returnedAt && isCurrentMonth(item.returnedAt)).length,
+    }
+  }, [assignmentHistory, assignments])
 
   useEffect(() => {
     void loadAssignments()
@@ -220,6 +240,14 @@ function AssignmentsPage() {
           </Button>
         ) : undefined}
       />
+
+      {!isLoading && !loadError && (
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Col xs={24} md={8}><ActionStatisticCard color="#0958d9" icon={<CheckCircleOutlined />} title="Aktif Zimmet" value={summaries.active} /></Col>
+          <Col xs={24} md={8}><ActionStatisticCard color="#389e0d" icon={<CalendarOutlined />} title="Bu Ay Verilen" value={summaries.assignedThisMonth} /></Col>
+          <Col xs={24} md={8}><ActionStatisticCard color="#d46b08" icon={<RollbackOutlined />} title="Bu Ay İade Alınan" value={summaries.returnedThisMonth} /></Col>
+        </Row>
+      )}
 
       <ContentCard>
         {loadError ? (

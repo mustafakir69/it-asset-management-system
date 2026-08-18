@@ -14,9 +14,14 @@ namespace TakipProgrami.Api.Controllers;
 public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<MaintenanceTaskDto>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<MaintenanceTaskDto>>> GetAll(
+        string? assetId,
+        CancellationToken cancellationToken)
     {
-        var tasks = await dbContext.MaintenanceTasks.AsNoTracking().Include(task => task.Asset).Include(task => task.MaintenancePlan).ThenInclude(x => x.ResponsibleUser).ThenInclude(x => x.Employee).Include(task => task.CompletedByUser).ThenInclude(x => x!.Employee)
+        var query = dbContext.MaintenanceTasks.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(assetId))
+            query = query.Where(task => task.AssetId == assetId.Trim());
+        var tasks = await query.Include(task => task.Asset).Include(task => task.MaintenancePlan).ThenInclude(x => x.ResponsibleUser).ThenInclude(x => x.Employee).Include(task => task.CompletedByUser).ThenInclude(x => x!.Employee)
             .OrderBy(task => task.PlannedDate).ToListAsync(cancellationToken);
         var today = DateOnly.FromDateTime(DateTime.Today);
         return Ok(tasks.Select(task => ToDto(task, today)).ToList());
@@ -52,6 +57,11 @@ public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) :
         task.CompletedByUserId = currentUserId;
         task.Result = request.Result.Trim();
         task.WorkNotes = request.WorkNotes.Trim();
+        var previousAssetStatus = task.Asset.Status;
+        if (previousAssetStatus.Equals(AssetLifecycleRules.InMaintenance, StringComparison.OrdinalIgnoreCase))
+        {
+            task.Asset.Status = AssetLifecycleRules.Available;
+        }
         var completedAt = new DateTimeOffset(
             request.CompletedDate.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified),
             TimeZoneInfo.Local.GetUtcOffset(request.CompletedDate.Value.ToDateTime(TimeOnly.MinValue)));
@@ -59,7 +69,7 @@ public sealed class MaintenanceTasksController(ApplicationDbContext dbContext) :
             task.AssetId,
             AssetMovementType.MaintenanceCompleted,
             completedAt,
-            task.Asset.Status,
+            previousAssetStatus,
             task.Asset.Status,
             currentUserId,
             $"{task.Title} bakım görevi tamamlandı. Sonuç: {task.Result}",

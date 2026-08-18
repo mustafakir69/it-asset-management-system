@@ -1,5 +1,5 @@
 import type { UserRole } from '../types/auth'
-import type { CreateUserInput, ItStaffMember, ManagedUser } from '../types/user'
+import type { CreateUserInput, ItStaffMember, ManagedUser, UpdateUserInput } from '../types/user'
 import { apiClient } from './api'
 import { getApiErrorMessage } from './apiError'
 
@@ -68,12 +68,54 @@ export const userService = {
     }
   },
 
+  async getUser(id: string): Promise<ManagedUser> {
+    try {
+      const response = await apiClient.get<unknown>(`/api/users/${encodeURIComponent(id)}`)
+      return mapUser(response.data)
+    } catch (error: unknown) {
+      throw new Error(getApiErrorMessage(error, 'Kullanıcı bilgileri alınamadı.'))
+    }
+  },
+
   async createUser(input: CreateUserInput): Promise<ManagedUser> {
     try {
       const response = await apiClient.post<unknown>('/api/users', input)
       return mapUser(response.data)
     } catch (error: unknown) {
       throw new Error(getApiErrorMessage(error, 'Kullanıcı oluşturulamadı.'))
+    }
+  },
+
+  async updateUser(id: string, input: UpdateUserInput): Promise<ManagedUser> {
+    try {
+      const response = await apiClient.put<unknown>(`/api/users/${encodeURIComponent(id)}`, input)
+      return mapUser(response.data)
+    } catch (error: unknown) {
+      throw new Error(getApiErrorMessage(error, 'Kullanıcı güncellenemedi.'))
+    }
+  },
+
+  async setUserActive(id: string, isActive: boolean): Promise<ManagedUser> {
+    try {
+      const response = await apiClient.put<unknown>(
+        `/api/users/${encodeURIComponent(id)}/status`,
+        { isActive },
+      )
+      return mapUser(response.data)
+    } catch (error: unknown) {
+      throw new Error(getApiErrorMessage(error, 'Kullanıcı durumu güncellenemedi.'))
+    }
+  },
+
+  async resetPassword(id: string, password: string): Promise<ManagedUser> {
+    try {
+      const response = await apiClient.put<unknown>(
+        `/api/users/${encodeURIComponent(id)}/password`,
+        { password },
+      )
+      return mapUser(response.data)
+    } catch (error: unknown) {
+      throw new Error(getApiErrorMessage(error, 'Kullanıcı parolası sıfırlanamadı.'))
     }
   },
 

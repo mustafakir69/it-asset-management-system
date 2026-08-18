@@ -64,3 +64,45 @@ export interface InventoryReportFilters { category?: string; status?: string; lo
 export interface AssignmentReportFilters { status?: string; department?: string; from?: string; to?: string }
 export interface StockReportFilters { category?: string; location?: string; critical?: boolean }
 export interface MaintenanceReportFilters { recordType?: string; status?: string }
+
+export interface WarrantyReportItem {
+  assetCode: string
+  assetName: string
+  category: string
+  warrantyEndDate: string | null
+  warrantyStatus: string
+  assetStatus: string
+  currentAssigneeName: string | null
+  currentAssigneeDepartment: string | null
+}
+
+export interface LicenseReportItem {
+  licenseCode: string
+  productName: string
+  vendor: string
+  licenseType: string
+  totalSeats: number
+  usedSeats: number
+  availableSeats: number
+  expirationDate: string | null
+  status: string
+}
+
+export interface SupportReportItem {
+  requestNumber: string
+  assetCode: string
+  assetName: string
+  requestedByName: string
+  department: string
+  priority: string
+  status: string
+  assignedToName: string | null
+  createdAt: string
+  completedAt: string | null
+  completedByName: string | null
+  result: string | null
+}
+
+export interface WarrantyReportFilters { warrantyStatus?: string; assetStatus?: string }
+export interface LicenseReportFilters { status?: string }
+export interface SupportReportFilters { status?: string; priority?: string }

@@ -23,9 +23,6 @@ public class LicenseCreateDto : IValidatableObject
     [Range(0, int.MaxValue, ErrorMessage = "Toplam lisans hakkı negatif olamaz.")]
     public int TotalSeats { get; init; }
 
-    [Range(0, int.MaxValue, ErrorMessage = "Kullanılan lisans hakkı negatif olamaz.")]
-    public int UsedSeats { get; init; }
-
     [Required(ErrorMessage = "Başlangıç tarihi zorunludur.")]
     public DateOnly? StartDate { get; init; }
 
@@ -38,13 +35,6 @@ public class LicenseCreateDto : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (UsedSeats > TotalSeats)
-        {
-            yield return new ValidationResult(
-                "Kullanılan lisans hakkı toplam lisans hakkını aşamaz.",
-                [nameof(UsedSeats)]);
-        }
-
         if (StartDate.HasValue && ExpirationDate.HasValue && ExpirationDate < StartDate)
         {
             yield return new ValidationResult(

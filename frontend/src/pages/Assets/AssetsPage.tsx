@@ -1,16 +1,21 @@
 import {
   ClearOutlined,
+  DatabaseOutlined,
+  DesktopOutlined,
   EditOutlined,
   EyeOutlined,
   MoreOutlined,
   PlusOutlined,
   SearchOutlined,
+  SolutionOutlined,
+  ToolOutlined,
+  WarningOutlined,
 } from '@ant-design/icons'
 import { Button, Col, Dropdown, Flex, Input, Row, Select, Space, Table, Tooltip, Typography } from 'antd'
 import type { MenuProps, TableColumnsType, TablePaginationConfig } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ContentCard, EmptyState, ErrorState, PageHeader, StatusTag } from '../../components'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { ActionStatisticCard, ContentCard, EmptyState, ErrorState, PageHeader, StatusTag } from '../../components'
 import { assetService } from '../../services/assetService'
 import { assetStatuses, type Asset, type AssetCategory, type AssetLocation, type AssetStatus } from '../../types/asset'
 import { formatDate } from '../../utils'
@@ -21,6 +26,7 @@ interface AssetFilters {
   category?: AssetCategory
   status?: AssetStatus
   location?: AssetLocation
+  criticalOnly?: boolean
 }
 
 interface AssetPagination {
@@ -34,10 +40,18 @@ const initialFilters: AssetFilters = {
 
 function AssetsPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [assets, setAssets] = useState<Asset[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [filters, setFilters] = useState<AssetFilters>(initialFilters)
+  const [filters, setFilters] = useState<AssetFilters>(() => {
+    const status = searchParams.get('status')
+    return {
+      ...initialFilters,
+      status: status && (assetStatuses as readonly string[]).includes(status) ? status as AssetStatus : undefined,
+      criticalOnly: searchParams.get('view') === 'critical',
+    }
+  })
   const [pagination, setPagination] = useState<AssetPagination>({ current: 1, pageSize: 10 })
 
   const loadAssets = useCallback(async () => {
@@ -97,20 +111,41 @@ function AssetsPage() {
         matchesSearch &&
         (!filters.category || asset.category === filters.category) &&
         (!filters.status || asset.status === filters.status) &&
+        (!filters.criticalOnly || ['Kayıp', 'Hurda', 'Elden Çıkarıldı'].includes(asset.status)) &&
         (!filters.location || asset.location === filters.location)
       )
     })
   }, [assets, filters])
 
   const updateFilters = (nextFilters: Partial<AssetFilters>) => {
-    setFilters((current) => ({ ...current, ...nextFilters }))
+    setFilters((current) => ({
+      ...current,
+      ...nextFilters,
+      ...(Object.hasOwn(nextFilters, 'status') ? { criticalOnly: false } : {}),
+    }))
+    if (Object.hasOwn(nextFilters, 'status')) setSearchParams({})
     setPagination((current) => ({ ...current, current: 1 }))
   }
 
   const clearFilters = () => {
     setFilters(initialFilters)
+    setSearchParams({})
     setPagination((current) => ({ ...current, current: 1 }))
   }
+
+  const selectStatus = (status?: AssetStatus, criticalOnly = false) => {
+    setFilters({ ...initialFilters, status, criticalOnly })
+    setSearchParams(criticalOnly ? { view: 'critical' } : status ? { status } : {})
+    setPagination((current) => ({ ...current, current: 1 }))
+  }
+
+  const summaries = useMemo(() => ({
+    total: assets.length,
+    assigned: assets.filter((asset) => asset.status === 'Zimmetli').length,
+    available: assets.filter((asset) => asset.status === 'Boşta').length,
+    maintenance: assets.filter((asset) => asset.status === 'Bakımda').length,
+    critical: assets.filter((asset) => ['Kayıp', 'Hurda', 'Elden Çıkarıldı'].includes(asset.status)).length,
+  }), [assets])
 
   const handlePaginationChange = (nextPagination: TablePaginationConfig) => {
     setPagination({
@@ -245,6 +280,16 @@ function AssetsPage() {
           </Button>
         }
       />
+
+      {!isLoading && !loadError && (
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Col flex="1 1 180px"><ActionStatisticCard active={!filters.status && !filters.criticalOnly} color="#1677ff" icon={<DesktopOutlined />} onClick={() => selectStatus()} title="Toplam Cihaz" value={summaries.total} /></Col>
+          <Col flex="1 1 180px"><ActionStatisticCard active={filters.status === 'Zimmetli'} color="#0958d9" icon={<SolutionOutlined />} onClick={() => selectStatus('Zimmetli')} title="Zimmetli" value={summaries.assigned} /></Col>
+          <Col flex="1 1 180px"><ActionStatisticCard active={filters.status === 'Boşta'} color="#389e0d" icon={<DatabaseOutlined />} onClick={() => selectStatus('Boşta')} title="Boşta" value={summaries.available} /></Col>
+          <Col flex="1 1 180px"><ActionStatisticCard active={filters.status === 'Bakımda'} color="#d46b08" icon={<ToolOutlined />} onClick={() => selectStatus('Bakımda')} title="Bakımda" value={summaries.maintenance} /></Col>
+          <Col flex="1 1 180px"><ActionStatisticCard active={filters.criticalOnly} color="#cf1322" icon={<WarningOutlined />} onClick={() => selectStatus(undefined, true)} title="Kritik Durum" value={summaries.critical} /></Col>
+        </Row>
+      )}
 
       <ContentCard>
         {loadError ? (

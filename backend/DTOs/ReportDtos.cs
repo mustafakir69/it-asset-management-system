@@ -65,3 +65,38 @@ public sealed record MaintenanceReportSummaryDto(
 public sealed record MaintenanceReportResponseDto(
     MaintenanceReportSummaryDto Summary,
     IReadOnlyList<MaintenanceReportDto> Records);
+
+public sealed record WarrantyReportDto(
+    string AssetCode,
+    string AssetName,
+    string Category,
+    DateOnly? WarrantyEndDate,
+    string WarrantyStatus,
+    string AssetStatus,
+    string? CurrentAssigneeName,
+    string? CurrentAssigneeDepartment);
+
+public sealed record LicenseReportDto(
+    string LicenseCode,
+    string ProductName,
+    string Vendor,
+    string LicenseType,
+    int TotalSeats,
+    int UsedSeats,
+    int AvailableSeats,
+    DateOnly? ExpirationDate,
+    string Status);
+
+public sealed record SupportReportDto(
+    string RequestNumber,
+    string AssetCode,
+    string AssetName,
+    string RequestedByName,
+    string Department,
+    string Priority,
+    string Status,
+    string? AssignedToName,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? CompletedAt,
+    string? CompletedByName,
+    string? Result);

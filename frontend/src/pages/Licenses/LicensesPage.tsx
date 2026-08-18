@@ -9,7 +9,6 @@ import {
   MoreOutlined,
   PlusOutlined,
   SearchOutlined,
-  StopOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
 import {
@@ -121,7 +120,7 @@ function LicensesPage() {
       },
       {
         key: 'active',
-        title: 'Aktif Lisans',
+        title: 'Aktif',
         value: countByStatus('Aktif'),
         color: '#389e0d',
         icon: <CheckCircleOutlined />,
@@ -129,7 +128,7 @@ function LicensesPage() {
       },
       {
         key: 'approaching',
-        title: '30 Gün İçinde Bitecek',
+        title: 'Yaklaşıyor',
         value: countByStatus('Yaklaşıyor'),
         color: '#d48806',
         icon: <ClockCircleOutlined />,
@@ -144,26 +143,11 @@ function LicensesPage() {
         status: 'Süresi Doldu',
       },
       {
-        key: 'inactive',
-        title: 'Pasif Lisans',
-        value: countByStatus('Pasif'),
-        color: '#595959',
-        icon: <StopOutlined />,
-        status: 'Pasif',
-      },
-      {
         key: 'rights',
         title: 'Toplam Lisans Hakkı',
         value: licenses.reduce((total, license) => total + license.totalSeats, 0),
         color: '#531dab',
         icon: <TeamOutlined />,
-      },
-      {
-        key: 'used',
-        title: 'Kullanılan Lisans Hakkı',
-        value: licenses.reduce((total, license) => total + license.usedSeats, 0),
-        color: '#08979c',
-        icon: <StopOutlined />,
       },
     ]
   }, [licenses])
@@ -328,7 +312,7 @@ function LicensesPage() {
         <Space className="licenses-content" direction="vertical" size="large">
           <Row gutter={[16, 16]}>
             {summaries.map((summary) => (
-              <Col key={summary.key} xs={24} sm={12} xl={8} xxl={6}>
+              <Col key={summary.key} flex="1 1 190px">
                 <ActionStatisticCard
                   active={summary.status === undefined
                     ? undefined

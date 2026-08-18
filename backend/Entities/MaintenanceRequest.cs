@@ -38,4 +38,5 @@ public sealed class MaintenanceRequest
     public Employee RequestedByEmployee { get; set; } = null!;
     public AppUser? AssignedToUser { get; set; }
     public AppUser? CompletedByUser { get; set; }
+    public ICollection<SupportRequestActivity> Activities { get; set; } = [];
 }

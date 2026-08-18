@@ -51,12 +51,24 @@
   white-space: nowrap;
 }
 
+.header-global-search {
+  width: min(420px, 34vw);
+  min-width: 220px;
+  margin-left: auto;
+}
+
+.global-search-result {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+}
+
 .header-user {
   display: flex;
   align-items: center;
   gap: var(--app-space-sm);
   min-width: 0;
-  margin-left: auto;
 }
 
 .header-user-details {
@@ -111,6 +123,13 @@
   .main-header .header-title,
   .header-user-details {
     display: none;
+  }
+
+  .header-global-search {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 120px;
+    margin-left: 0;
   }
 
   .header-user .ant-btn > span:not(.ant-btn-icon) {

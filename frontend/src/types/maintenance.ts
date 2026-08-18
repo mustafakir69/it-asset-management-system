@@ -95,3 +95,15 @@ export interface MaintenanceRequestInput {
 }
 
 export interface MaintenanceCompleteInput { completedAt: string; result: string; workNotes: string }
+
+export interface SupportRequestActivity {
+  id: string
+  supportRequestId: string
+  activityType: string
+  occurredAt: string
+  performedByUserId: string
+  performedByName: string
+  oldValue: string | null
+  newValue: string | null
+  description: string | null
+}

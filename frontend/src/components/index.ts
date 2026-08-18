@@ -20,3 +20,4 @@ export { default as MaintenanceTaskActions } from './MaintenanceTaskActions/Main
 export type { MaintenanceTaskActionsProps } from './MaintenanceTaskActions/MaintenanceTaskActions'
 export { default as MaintenanceRequestActions } from './MaintenanceRequestActions/MaintenanceRequestActions'
 export type { MaintenanceRequestActionsProps } from './MaintenanceRequestActions/MaintenanceRequestActions'
+export { default as GlobalSearch } from './GlobalSearch/GlobalSearch'

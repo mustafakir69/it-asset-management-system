@@ -12,6 +12,7 @@ import {
   type MaintenanceTask,
   type MaintenanceTaskCompleteInput,
   type MaintenanceTaskRescheduleInput,
+  type SupportRequestActivity,
 } from '../types/maintenance'
 import { apiClient } from './api'
 
@@ -67,6 +68,21 @@ const mapRequest = (value: unknown): MaintenanceRequest => {
   }
 }
 
+const mapActivity = (value: unknown): SupportRequestActivity => {
+  if (!isRecord(value)) throw new Error('API geçersiz bir talep hareketi döndürdü.')
+  return {
+    id: string(value.id, 'id'),
+    supportRequestId: string(value.supportRequestId, 'supportRequestId'),
+    activityType: string(value.activityType, 'activityType'),
+    occurredAt: string(value.occurredAt, 'occurredAt'),
+    performedByUserId: string(value.performedByUserId, 'performedByUserId'),
+    performedByName: string(value.performedByName, 'performedByName'),
+    oldValue: nullable(value.oldValue, 'oldValue'),
+    newValue: nullable(value.newValue, 'newValue'),
+    description: nullable(value.description, 'description'),
+  }
+}
+
 const validationMessage = (value: unknown): string | undefined => isRecord(value) ? Object.values(value).flatMap((entry) => Array.isArray(entry) ? entry.filter((item): item is string => typeof item === 'string') : []).join(' ') || undefined : undefined
 const apiError = (error: unknown, fallback: string): Error => {
   if (!axios.isAxiosError(error)) return new Error(error instanceof Error ? error.message : fallback)
@@ -88,6 +104,7 @@ export const maintenanceService = {
   getPlans: () => getList('/api/maintenance/plans', mapPlan, 'Bakım planları yüklenemedi.'),
   async createPlan(input: MaintenancePlanInput) { try { return mapPlan((await apiClient.post('/api/maintenance/plans', input)).data) } catch (error) { throw apiError(error, 'Bakım planı kaydedilemedi.') } },
   getTasks: () => getList('/api/maintenance/tasks', mapTask, 'Bakım görevleri yüklenemedi.'),
+  getTasksByAsset: (assetId: string) => getList(`/api/maintenance/tasks?assetId=${encodeURIComponent(assetId)}`, mapTask, 'Cihaz bakım geçmişi yüklenemedi.'),
   getTaskById: (id: string) => getOne(`/api/maintenance/tasks/${encodeURIComponent(id)}`, mapTask, 'Bakım görevi yüklenemedi.'),
   async completeTask(id: string, input: MaintenanceTaskCompleteInput) { try { return mapTask((await apiClient.put(`/api/maintenance/tasks/${encodeURIComponent(id)}/complete`, input)).data) } catch (error) { throw apiError(error, 'Bakım görevi tamamlanamadı.') } },
   async cancelTask(id: string, cancellationReason: string) { try { return mapTask((await apiClient.put(`/api/maintenance/tasks/${encodeURIComponent(id)}/cancel`, { cancellationReason })).data) } catch (error) { throw apiError(error, 'Bakım görevi iptal edilemedi.') } },
@@ -95,6 +112,7 @@ export const maintenanceService = {
   getRequests: () => getList('/api/support-requests', mapRequest, 'Teknik destek talepleri yüklenemedi.'),
   getMyRequests: () => getList('/api/support-requests/my', mapRequest, 'Teknik destek talepleriniz yüklenemedi.'),
   getRequestById: (id: string) => getOne(`/api/support-requests/${encodeURIComponent(id)}`, mapRequest, 'Teknik destek talebi yüklenemedi.'),
+  getRequestActivities: (id: string) => getList(`/api/support-requests/${encodeURIComponent(id)}/activities`, mapActivity, 'Talep hareketleri yüklenemedi.'),
   async createRequest(input: MaintenanceRequestInput) { try { return mapRequest((await apiClient.post('/api/support-requests', input)).data) } catch (error) { throw apiError(error, 'Teknik destek talebi kaydedilemedi.') } },
   async assignRequest(id: string, assignedToUserId: string) { try { return mapRequest((await apiClient.put(`/api/support-requests/${encodeURIComponent(id)}/assign`, { assignedToUserId })).data) } catch (error) { throw apiError(error, 'Teknik destek talebi atanamadı.') } },
   async startRequest(id: string) { try { return mapRequest((await apiClient.put(`/api/support-requests/${encodeURIComponent(id)}/start`)).data) } catch (error) { throw apiError(error, 'Teknik destek talebi işleme alınamadı.') } },

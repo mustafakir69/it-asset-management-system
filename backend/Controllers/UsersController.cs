@@ -19,6 +19,15 @@ public sealed class UsersController(UserService userService) : ControllerBase
         CancellationToken cancellationToken) =>
         Ok(await userService.GetUsersAsync(cancellationToken));
 
+    [HttpGet("{id}")]
+    [ProducesResponseType<UserDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UserDto>> GetById(string id, CancellationToken cancellationToken)
+    {
+        var user = await userService.GetByIdAsync(id, cancellationToken);
+        return user is null ? NotFound() : Ok(user);
+    }
+
     [HttpGet("username-suggestion")]
     [ProducesResponseType<UsernameSuggestionDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -72,6 +81,62 @@ public sealed class UsersController(UserService userService) : ControllerBase
                 result.ErrorMessage!)
         };
     }
+
+    [HttpPut("{id}")]
+    public async Task<ActionResult<UserDto>> Update(
+        string id,
+        UserUpdateDto request,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetCaller(out var callerRole, out _)) return Forbid();
+        return OperationResponse(await userService.UpdateAsync(id, request, callerRole, cancellationToken));
+    }
+
+    [HttpPut("{id}/status")]
+    public async Task<ActionResult<UserDto>> SetStatus(
+        string id,
+        UserStatusUpdateDto request,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetCaller(out var callerRole, out var currentUserId)) return Forbid();
+        return OperationResponse(await userService.SetActiveAsync(
+            id,
+            request.IsActive!.Value,
+            callerRole,
+            currentUserId,
+            cancellationToken));
+    }
+
+    [HttpPut("{id}/password")]
+    public async Task<ActionResult<UserDto>> ResetPassword(
+        string id,
+        UserPasswordResetDto request,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetCaller(out var callerRole, out _)) return Forbid();
+        return OperationResponse(await userService.ResetPasswordAsync(
+            id,
+            request.Password,
+            callerRole,
+            cancellationToken));
+    }
+
+    private bool TryGetCaller(out AppRole callerRole, out string currentUserId)
+    {
+        callerRole = default;
+        currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        return currentUserId.Length > 0 &&
+            Enum.TryParse(User.FindFirstValue(ClaimTypes.Role), out callerRole);
+    }
+
+    private ActionResult<UserDto> OperationResponse(UserOperationResult result) => result.Status switch
+    {
+        UserOperationStatus.Success => Ok(result.User),
+        UserOperationStatus.NotFound => ProblemResponse(StatusCodes.Status404NotFound, "Kullanıcı bulunamadı", result.ErrorMessage!),
+        UserOperationStatus.Forbidden => ProblemResponse(StatusCodes.Status403Forbidden, "Yetkisiz işlem", result.ErrorMessage!),
+        UserOperationStatus.Conflict => ProblemResponse(StatusCodes.Status409Conflict, "Kullanıcı güncellenemedi", result.ErrorMessage!),
+        _ => ProblemResponse(StatusCodes.Status400BadRequest, "Kullanıcı güncellenemedi", result.ErrorMessage!)
+    };
 
     private ObjectResult ProblemResponse(int statusCode, string title, string detail) =>
         StatusCode(statusCode, new ProblemDetails
